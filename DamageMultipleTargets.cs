@@ -10,9 +10,9 @@ namespace Tasks
         int numToHit = 3;
         HashSet<GameObject> targets;
 
-        public override void Init()
+        public override void OnInstall()
         {
-            base.Init();
+            base.OnInstall();
             targets = new HashSet<GameObject>();
 
             // Can I do it this way somehow?

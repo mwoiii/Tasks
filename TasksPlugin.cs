@@ -27,6 +27,7 @@ using System.Collections.Generic;
 namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
+    [R2APISubmoduleDependency(nameof(UnlockablesAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -55,13 +56,22 @@ namespace Tasks
         {
             Chat.AddMessage("Loaded Task plugin");
 
-            TempAchievements temp = new TempAchievements();
-            temp.Awake();
+            //TempAchievements temp = new TempAchievements();
+            //temp.Awake();
+            // all temp.Awake() does is:
+            //UnlockablesAPI.AddUnlockable<KillBeetle>(true);
+            UnlockablesAPI.AddUnlockable<AirKills>(true);
+            AirKills.OnCompletion += TaskCompletion;
 
             KillBeetle.OnCompletion += TaskCompletion;
 
             playerDict = new Dictionary<uint, CharacterMaster>();
             Run.onRunStartGlobal += PopulatePlayerDictionary;
+
+            // Might be useful to tell when stages start and end
+            //Stage.onServerStageBegin
+            //Stage.onServerStageComplete
+            
 
             // Sounds like I'd only get local and not necessarily current
             //UserProfile.GetAvailableProfileNames()
@@ -140,7 +150,7 @@ namespace Tasks
                 {
                     Chat.AddMessage("Trying to send Activate");
 
-                    OnActivate(0);
+                    OnActivate(1);
                     activated = true;
                 }
             }
@@ -182,23 +192,8 @@ namespace Tasks
             }
         }
 
-        /*
-        private void FixedUpdate()
-        {
-            for (int i = 0; i < currentTasks.Length; i++)
-            {
-                currentTasks[i].FixedUpdate();
-            }
-        }
-        */
-        void RandomizeTasks()
-        {
-            for (int i = 0; i < currentTasks.Length; i++)
-            {
-                int r = UnityEngine.Random.Range(0, allTasks.Length);
-                currentTasks[i] = allTasks[r];
-            }
-        }
+
+
 
         void SetupHooks()
         {

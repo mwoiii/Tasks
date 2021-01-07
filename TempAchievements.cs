@@ -26,6 +26,8 @@ namespace Tasks
 
         public void Awake()
         {
+            // This class doesn't actually do anything
+            // TasksPlugin could do this
             Chat.AddMessage("Loaded Beetle achievement");
             
             UnlockablesAPI.AddUnlockable<KillBeetle>(true);

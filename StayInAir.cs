@@ -14,7 +14,7 @@ namespace Tasks
         {
             return timeInAir >= timeToStayInAir;
         }
-
+        /*
         public override void FixedUpdate()
         {
             base.FixedUpdate();
@@ -27,6 +27,7 @@ namespace Tasks
                 }
             }
         }
+        */
 
         bool Airborne()
         {
