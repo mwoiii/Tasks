@@ -18,7 +18,7 @@ namespace Tasks
             currentDamage += damage;
             if(IsComplete())
             {
-                EndTask();
+                CompleteTask();
             }
         }
 

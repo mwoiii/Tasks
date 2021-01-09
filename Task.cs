@@ -7,6 +7,9 @@ using RoR2;
 
 namespace Tasks
 {
+    // Put plugin here
+    // C:\Program Files (x86)\Steam\steamapps\common\Risk of Rain 2\BepInEx\plugins\MyMods
+
     /*
     [R2APISubmoduleDependency(nameof(UnlockablesAPI))]
     // Adds Task : ModdedUnlockableAndAchievements
@@ -26,16 +29,23 @@ namespace Tasks
         public override string UnlockableNameToken { get; } = myName + myMod + thisClass + "UNLOCKABLE_NAME"; // plain English
         protected override VanillaSpriteProvider SpriteProvider { get; } = new VanillaSpriteProvider("VANILLA PATH");
 
-        protected virtual int _id { get;} = 0;
-        public static event Action<int, uint> OnCompletion;
+        //protected virtual int _id { get;} = 0;
+        protected virtual TaskType type { get; } = TaskType.Base;
+        protected virtual string name { get; } = "Base Task";
+        public static event Action<TaskType, uint> OnCompletion;
 
         UserProfile profile;
         protected UserAchievementManager ownerCached;
 
+        virtual protected void SetupName()
+        {
+            Language.currentLanguage.SetStringByToken(AchievementNameToken, name);
+        }
+
         override public void OnInstall()
         {
             base.OnInstall();
-
+            SetupName();
             // cache the profile
             // need it for showing the popup, revoking achievements
             profile = this.owner.userProfile;
@@ -50,6 +60,7 @@ namespace Tasks
             Run.onRunDestroyGlobal += RunOver;
 
             TasksPlugin.OnActivate += this.Activate;
+            TasksPlugin.OnDeactivate += this.Deactivate;
             TasksPlugin.OnResetAll += this.RemoveAchievement;
         }
 
@@ -66,6 +77,7 @@ namespace Tasks
             Run.onRunDestroyGlobal -= RunOver;
 
             TasksPlugin.OnActivate -= this.Activate;
+            TasksPlugin.OnDeactivate -= this.Deactivate;
             TasksPlugin.OnResetAll -= this.RemoveAchievement;
 
             // Gets called automatically when I set granted to true
@@ -75,14 +87,14 @@ namespace Tasks
             base.OnUninstall();
         }
 
-        virtual protected void EndTask()
+        virtual protected void CompleteTask()
         {
             ShowPopup();
             Unhook();
             // send message to server
             // id is this task
             // netId is the player
-            OnCompletion?.Invoke(_id, ownerCached.localUser.cachedMaster.netId.Value);
+            OnCompletion?.Invoke(type, ownerCached.localUser.cachedMaster.netId.Value);
         }
 
         virtual protected bool IsComplete()
@@ -109,7 +121,8 @@ namespace Tasks
 
         void Activate(int id)
         {
-            if(id == _id)
+            //Chat.AddMessage($"{id} == {(int)type}: {(id == (int)type)}");
+            if(id == (int)type)
             {
                 //Chat.AddMessage("Activated " + id);
                 // Need to remove once for each time you get the achievement
@@ -120,6 +133,13 @@ namespace Tasks
             }
         }
 
+        public void Deactivate(int id)
+        {
+            if(id == (int)type)
+            {
+                Unhook();
+            }
+        }
         protected virtual void SetHooks()
         {
             // Setup achievement-specific hooks

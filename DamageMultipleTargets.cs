@@ -29,7 +29,7 @@ namespace Tasks
                 // entity.OnDeath += OnKill();
                 if(IsComplete())
                 {
-                    EndTask();
+                    CompleteTask();
                 }
             }
         }

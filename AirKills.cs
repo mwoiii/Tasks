@@ -12,26 +12,48 @@ namespace Tasks
         //protected static new string thisClass = "AIR_KILLS_";
         //  /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TEMP_ACHIEVEMENTS_KILL_BEETLE_ACHIEVEMENT_NAME /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TASKS_BASE_TASK_ACHIEVEMENT_NAME
 
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_ID";
-        public override string UnlockableIdentifier { get; } = "";
+        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_ID"; // delete me? Pretty sure
+        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_REWARD_ID"; // Delete me. Maybe not
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
         public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "Air Kills"; // plain English
+        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = "Get 3 kills whilst airborne"; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
 
-        protected override int _id { get; } = 1;
+        //protected override int _id { get; } = 1;
+        protected override TaskType type { get; } = TaskType.AirKills;
+        protected override string name { get; } = "Air Kills";
 
         int kills = 0;
         int killsNeeded = 3;
 
         protected override void SetHooks()
         {
+            //Language.currentLanguage.SetStringByToken(AchievementNameToken, "Air Kills");
+            //Chat.AddMessage("Set Hooks in AirKills");
             kills = 0;
 
             base.SetHooks();
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
             
+            /*
+            if(ownerCached is null)
+            {
+                Chat.AddMessage("Owner is null");
+            }
+            if (ownerCached.localUser is null)
+            {
+                Chat.AddMessage("localUser is null");
+            }
+            if (ownerCached.localUser.cachedBody is null)
+            {
+                Chat.AddMessage("body is null");
+            }
+            if (ownerCached.localUser.cachedBody.characterMotor is null)
+            {
+                Chat.AddMessage("Motor is null");
+            }
+            */
             ownerCached.localUser.cachedBody.characterMotor.onHitGround += OnLanding;
             //Chat.AddMessage("Set hooks for AirKills");
         }
@@ -65,7 +87,7 @@ namespace Tasks
                     kills++;
                     if (IsComplete())
                     {
-                        EndTask();
+                        CompleteTask();
                     }
                 }
             }
