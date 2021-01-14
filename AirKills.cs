@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine.Networking;
 
 namespace Tasks
 {
@@ -27,15 +28,25 @@ namespace Tasks
         int kills = 0;
         int killsNeeded = 3;
 
+        //delegate void killDelegate(DamageReport damageReport);
+
+
         protected override void SetHooks()
         {
             //Language.currentLanguage.SetStringByToken(AchievementNameToken, "Air Kills");
-            //Chat.AddMessage("Set Hooks in AirKills");
+            Chat.AddMessage("Set Hooks in AirKills");
             kills = 0;
 
             base.SetHooks();
+
+            //killDelegate killMethod = OnKill;
+            //CmdSetHooks(killMethod);
+
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
-            
+            // if(server)
+            //if(NetworkServer.active)
+            GlobalEventManager.onCharacterDeathGlobal += RpcOnKill;
+            // if networkServer.notActive return;
             /*
             if(ownerCached is null)
             {
@@ -44,6 +55,10 @@ namespace Tasks
             if (ownerCached.localUser is null)
             {
                 Chat.AddMessage("localUser is null");
+            }
+            else
+            {
+                Chat.AddMessage($"localUser: {ownerCached.localUser} Id: {ownerCached.localUser.id}");
             }
             if (ownerCached.localUser.cachedBody is null)
             {
@@ -54,7 +69,12 @@ namespace Tasks
                 Chat.AddMessage("Motor is null");
             }
             */
+            // They are
+            //Chat.AddMessage($"Owners are still the same: {ownerCached == owner}");
+            
             ownerCached.localUser.cachedBody.characterMotor.onHitGround += OnLanding;
+            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
+
             //Chat.AddMessage("Set hooks for AirKills");
         }
 
@@ -62,6 +82,7 @@ namespace Tasks
         {
             GlobalEventManager.onCharacterDeathGlobal -= OnKill;
             ownerCached.localUser.cachedBody.characterMotor.onHitGround -= OnLanding;
+            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
 
             base.Unhook();
         }
@@ -73,6 +94,7 @@ namespace Tasks
 
         public void OnKill(DamageReport damageReport)
         {
+            // this doesn't get called on the client
             if (damageReport is null) return;
             if (damageReport.attackerMaster is null) return;
 
@@ -84,13 +106,28 @@ namespace Tasks
             {
                 if (Airborne())
                 {
+                    Chat.AddMessage("Is airborne");
+
                     kills++;
                     if (IsComplete())
                     {
+                        Chat.AddMessage("Completed AirKills");
                         CompleteTask();
+                        kills = 0;
                     }
                 }
             }
+        }
+
+        [ClientRpc]
+        void RpcOnKill(DamageReport damageReport)
+        {
+            // server calls this
+            // it runs on each client
+            // each client checks to see if the damage report has anything to do with them
+
+            // Can I just do this?
+            OnKill(damageReport);
         }
 
         bool Airborne()
@@ -103,6 +140,18 @@ namespace Tasks
 
         public void OnLanding(ref CharacterMotor.HitGroundInfo hitGroundInfo)
         {
+            Chat.AddMessage("Landing");
+            kills = 0;
+        }
+
+        [ClientRpc]
+        public void RpcOnLanding(ref CharacterMotor.HitGroundInfo hitGroundInfo)
+        {
+            // put this above
+            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
+
+            // would this work?
+            Chat.AddMessage("Landing Rpc");
             kills = 0;
         }
     }

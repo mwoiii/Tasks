@@ -10,6 +10,7 @@ using R2API;
 using R2API.Utils;
 using System.Collections.Generic;
 using System.Collections;
+using System.Collections.ObjectModel;
 
 /// <summary>
 /// Things to do: 
@@ -50,6 +51,7 @@ namespace Tasks
         Dictionary<uint, CharacterMaster> playerDict;
         // kinda bad form. There's already an array that holds the CharacterMasters. Why do I need to copy them?
         // I guess I can't guarentee it stays in the same order
+        List<CharacterMaster> playerCharacterMasters;
 
         int numTasks;
         Reward[] rewards;
@@ -72,6 +74,7 @@ namespace Tasks
             //KillBeetle.OnCompletion += TaskCompletion;
 
             playerDict = new Dictionary<uint, CharacterMaster>();
+            playerCharacterMasters = new List<CharacterMaster>();
             Run.onRunStartGlobal += PopulatePlayerDictionary;
 
             Run.onRunStartGlobal += PopulateTempItemLists;
@@ -184,14 +187,20 @@ namespace Tasks
             if (Input.GetKeyDown(KeyCode.F4))
             {
                 //OnPopup?.Invoke();
-                Chat.AddMessage("Trying to give myself an item");
+                Chat.AddMessage("Trying to give both players an item");
                 // This works!
+                // Can't be called on the client
+                // Host has a NetworServer.Active be true
                 CharacterMaster.readOnlyInstancesList[0]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
+                CharacterMaster.readOnlyInstancesList[1]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
+                CmdGiveMyselfItem();
                 //CharacterMaster.readOnlyInstancesList[0]?.inventory?.RemoveItem(ItemIndex.ArmorPlate);
 
             }
             if (Input.GetKeyDown(KeyCode.F5))
             {
+                Chat.AddMessage("Pressing F5");
+
                 // I think I can just omit inventory....
                 string netID = CharacterMaster.readOnlyInstancesList[0].netId.ToString();
                 if (!netID.IsNullOrWhiteSpace())
@@ -217,13 +226,14 @@ namespace Tasks
                 }
                 */
             }
-            if (Input.GetKeyDown(KeyCode.F7))
+            if (Input.GetKeyDown(KeyCode.F1))
             {
-                Chat.AddMessage("Pressed F7");
+                Chat.AddMessage("Pressed F1");
                 // who is in the list?
                 for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
                 {
-                    Chat.AddMessage($"Player: {CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController} PlayerID: {CharacterMaster.readOnlyInstancesList[i].playerControllerId} Stats: {CharacterMaster.readOnlyInstancesList[i].playerStatsComponent}");
+                    Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
+                    Chat.AddMessage($"Player: {CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController} PlayerID: {CharacterMaster.readOnlyInstancesList[i].playerControllerId}");
                 }
 
                 /*
@@ -248,6 +258,11 @@ namespace Tasks
                 [Info: Unity Log] Name: LemurianMaster(Clone) NetID: 91 LocalPlayer: False
                 [Info: Unity Log] Name: BeetleMaster(Clone) NetID: 102 LocalPlayer: False
                 */
+            }
+            if(Input.GetKeyDown(KeyCode.F7))
+            {
+                Chat.AddMessage("Pressed F7");
+                CmdGiveMyselfItem();
             }
         }
 
@@ -277,6 +292,12 @@ namespace Tasks
             {
                 Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
                 playerDict[CharacterMaster.readOnlyInstancesList[i].netId.Value] = CharacterMaster.readOnlyInstancesList[i];
+
+                if(CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController != null)
+                {
+                    //characterMasters
+                    playerCharacterMasters.Add(CharacterMaster.readOnlyInstancesList[i]);
+                }
             }
 
             // Only runs the loop once
@@ -335,6 +356,14 @@ namespace Tasks
             activated = false;
             //GiveRandomItem(netID);
             GiveReward(taskType, netID);
+        }
+
+        [Command]
+        void CmdGiveMyselfItem()
+        {
+            // This does not work
+            // Assuming index 1 is player 2 (a client)
+            CharacterMaster.readOnlyInstancesList[1].inventory.GiveItem(ItemIndex.Feather);
         }
 
         void GiveRandomItem(uint ID)
@@ -404,12 +433,12 @@ namespace Tasks
         void RemoveTempItems()
         {
             // Something here goes out of range
-            Chat.AddMessage($"Character list: {CharacterMaster.readOnlyInstancesList.Count} TempItemLists array: {TempItemLists.Length} Expect 1 for both");
+            Chat.AddMessage($"Character list: {CharacterMaster.readOnlyInstancesList.Count} playerCharList: {playerCharacterMasters.Count} TempItemLists array: {TempItemLists.Length} Expect 1 for all");
             // this list counts mobs as well as players
             // players have
             //CharacterMaster.readOnlyInstancesList[0].playerCharacterMasterController
             // but mobs don't
-            for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
+            for (int i = 0; i < playerCharacterMasters.Count; i++)
             {
 
                 List<TempItem> list = TempItemLists[i];
@@ -430,7 +459,10 @@ namespace Tasks
                     // Will it break what's in my dict? dunno
                     // are the CharacterMasters in the dict copies or references?
                     // appears to work for 1 player
-                    CharacterMaster.readOnlyInstancesList[i].inventory.RemoveItem(temp.item, temp.count);
+
+                    // using my own playerCharacter cache
+                    // CharacterMaster.readOnlyInstanceList counts mobs too
+                    playerCharacterMasters[i].inventory.RemoveItem(temp.item, temp.count);
                     // player dict needs 6 instead of 0
                     //playerDict[(uint)i].inventory.RemoveItem(temp.item, temp.count);
                     list.RemoveAt(0);
