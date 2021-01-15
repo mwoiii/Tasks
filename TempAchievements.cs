@@ -139,9 +139,9 @@ namespace Tasks
             //Run.onServerGameOver
             OnUninstallFinal();
             // Add these so the manager can control when the achievement is available
-            TasksPlugin.OnActivate += this.Activate;
+            //TasksPlugin.OnActivate += this.Activate;
             TasksPlugin.OnResetAll += this.Reset;
-            TasksPlugin.OnPopup += this.ShowPopup;
+            //TasksPlugin.OnPopup += this.ShowPopup;
             
         }
 
@@ -161,9 +161,9 @@ namespace Tasks
         {
             // called when the game ends
             // I think you need this to be able to play multiple games without resetting the game
-            TasksPlugin.OnActivate -= this.Activate;
+            //TasksPlugin.OnActivate -= this.Activate;
             TasksPlugin.OnResetAll -= this.Reset;
-            TasksPlugin.OnPopup -= this.ShowPopup;
+            //TasksPlugin.OnPopup -= this.ShowPopup;
 
         }
 

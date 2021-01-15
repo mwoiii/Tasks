@@ -32,10 +32,11 @@ namespace Tasks
         //protected virtual int _id { get;} = 0;
         protected virtual TaskType type { get; } = TaskType.Base;
         protected virtual string name { get; } = "Base Task";
-        public static event Action<TaskType, uint> OnCompletion;
+        public static event Action<TaskType, int> OnCompletion;
 
         UserProfile profile;
         protected UserAchievementManager ownerCached;
+        protected int totalNumberPlayers;
 
         virtual protected void SetupName()
         {
@@ -62,6 +63,7 @@ namespace Tasks
             TasksPlugin.OnActivate += this.Activate;
             TasksPlugin.OnDeactivate += this.Deactivate;
             TasksPlugin.OnResetAll += this.RemoveAchievement;
+            TasksPlugin.OnPopup += this.ShowPopup;
         }
 
         override public void OnUninstall()
@@ -79,6 +81,8 @@ namespace Tasks
             TasksPlugin.OnActivate -= this.Activate;
             TasksPlugin.OnDeactivate -= this.Deactivate;
             TasksPlugin.OnResetAll -= this.RemoveAchievement;
+            TasksPlugin.OnPopup -= this.ShowPopup;
+
 
             // Gets called automatically when I set granted to true
             // but I don't do that because
@@ -89,22 +93,37 @@ namespace Tasks
 
         virtual protected void CompleteTask()
         {
-            ShowPopup();
+            // suppress errors for now
+        }
+        virtual protected void CompleteTask(int playerNum)
+        {
+            //ShowPopup();
             Unhook();
             // send message to server
             // id is this task
             // netId is the player
-            OnCompletion?.Invoke(type, ownerCached.localUser.cachedMaster.netId.Value);
+            OnCompletion?.Invoke(type, playerNum);
         }
 
-        virtual protected bool IsComplete()
+        virtual protected bool IsComplete(int playerNum)
         {
             return false;
         }
 
         void ShowPopup()
         {
+            // how to make this run on the client?
+            //CharacterMaster m;
+            //TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<UserProfile>().AddAchievement(this.achievementDef.identifier, false);
             profile.AddAchievement(this.achievementDef.identifier, false);
+        }
+
+        void ShowPopup(TaskType t)
+        {
+            if(t == type)
+            {
+                ShowPopup();
+            }
         }
 
         void RemoveAchievement()
@@ -119,7 +138,7 @@ namespace Tasks
             }
         }
 
-        void Activate(int id)
+        void Activate(int id, int numPlayers)
         {
             //Chat.AddMessage($"{id} == {(int)type}: {(id == (int)type)}");
             if(id == (int)type)
@@ -129,7 +148,8 @@ namespace Tasks
                 // and Can't do it the same frame you get the achieve
                 // so doing it before you activate again works
                 RemoveAchievement();
-                SetHooks();
+                totalNumberPlayers = numPlayers;
+                SetHooks(numPlayers);
             }
         }
 
@@ -140,7 +160,7 @@ namespace Tasks
                 Unhook();
             }
         }
-        protected virtual void SetHooks()
+        protected virtual void SetHooks(int numPlayers)
         {
             // Setup achievement-specific hooks
             // Like:

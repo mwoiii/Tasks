@@ -10,7 +10,7 @@ namespace Tasks
         float timeInAir;
         float timeToStayInAir = 10;
 
-        override protected bool IsComplete()
+        override protected bool IsComplete(int playerNum)
         {
             return timeInAir >= timeToStayInAir;
         }

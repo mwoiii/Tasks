@@ -25,19 +25,23 @@ namespace Tasks
         protected override TaskType type { get; } = TaskType.AirKills;
         protected override string name { get; } = "Air Kills";
 
-        int kills = 0;
+        int[] kills;
         int killsNeeded = 3;
 
         //delegate void killDelegate(DamageReport damageReport);
 
+        List<CharacterMotor.HitGroundDelegate> groundDelegateList = new List<CharacterMotor.HitGroundDelegate>();
 
-        protected override void SetHooks()
+        protected override void SetHooks(int numPlayers)
         {
             //Language.currentLanguage.SetStringByToken(AchievementNameToken, "Air Kills");
-            Chat.AddMessage("Set Hooks in AirKills");
-            kills = 0;
+            Chat.AddMessage($"Set Hooks in AirKills. {numPlayers} players");
+            
 
-            base.SetHooks();
+            base.SetHooks(numPlayers);
+            kills = new int[numPlayers];
+
+            //kills = 0;
 
             //killDelegate killMethod = OnKill;
             //CmdSetHooks(killMethod);
@@ -45,7 +49,7 @@ namespace Tasks
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
             // if(server)
             //if(NetworkServer.active)
-            GlobalEventManager.onCharacterDeathGlobal += RpcOnKill;
+            //GlobalEventManager.onCharacterDeathGlobal += RpcOnKill;
             // if networkServer.notActive return;
             /*
             if(ownerCached is null)
@@ -72,87 +76,87 @@ namespace Tasks
             // They are
             //Chat.AddMessage($"Owners are still the same: {ownerCached == owner}");
             
-            ownerCached.localUser.cachedBody.characterMotor.onHitGround += OnLanding;
-            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
+            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += OnLanding;
+            
+            for (int i = 0; i < totalNumberPlayers; i++)
+            {
+                
+                Chat.AddMessage($"Set hooks for player {i}");
+                // is it a weird timing thing?
+                // like when onHitGround eventually gets called, it just finds what i was last instead of what it was when this was first added. Like lazy evaluation
+                // I think I was right. When I set i=5 after this, when I hit the ground, it said player 6 did it (which is what i was last)
+                // Neat. This fixes it.
+                // why: https://answers.unity.com/questions/908847/passing-a-temporary-variable-to-add-listener.html
+                // something something scope. a for loop is compiled into int i=0; while() {}
+                // so the i isn't inside the loop like this temp is.
+                int tempInt = i;
 
-            //Chat.AddMessage("Set hooks for AirKills");
+                // to get it to remove itself, I need to store the delegate in a list
+                CharacterMotor.HitGroundDelegate myDel = (ref CharacterMotor.HitGroundInfo _) => PlayerHitGround(tempInt);
+                groundDelegateList.Add(myDel);
+                TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround += groundDelegateList[tempInt];
+                // this version works, but I can't unsub it
+                //TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround += (ref CharacterMotor.HitGroundInfo _) => PlayerHitGround(tempInt);
+            }
         }
 
         protected override void Unhook()
         {
             GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-            ownerCached.localUser.cachedBody.characterMotor.onHitGround -= OnLanding;
-            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
+
+            for (int i = 0; i < totalNumberPlayers; i++)
+            {
+                // delegate list is created when it's hooked up. This might break if unhook is called before setHooks
+                int tempInt = i;
+                TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround -= groundDelegateList[tempInt];
+            }
 
             base.Unhook();
         }
 
-        protected override bool IsComplete()
+        protected override bool IsComplete(int playerNum)
         {
-            return kills >= killsNeeded;
+            return kills[playerNum] >= killsNeeded;
         }
 
         public void OnKill(DamageReport damageReport)
         {
-            // this doesn't get called on the client
             if (damageReport is null) return;
             if (damageReport.attackerMaster is null) return;
+            if (damageReport.attackerMaster.playerCharacterMasterController is null) return;
 
             //if (damageReport.victimMaster is null) return;
             //Chat.AddMessage(String.Format("Killer: {0} Me: {1} Victim: {2}", damageReport.attackerMaster.ToString(), damageReport.victimMaster.ToString(), ownerCached.localUser.cachedMaster.ToString()));
             //[Info: Unity Log] Killer: CommandoMaster(Clone)(RoR2.CharacterMaster) Me: LemurianMaster(Clone)(RoR2.CharacterMaster) Victim: CommandoMaster(Clone)(RoR2.CharacterMaster)
             // Did I kill it?
-            if (damageReport.attackerMaster == ownerCached.localUser.cachedMaster)
+            int playerNum = TasksPlugin.GetPlayerNumber(damageReport.attackerMaster);
+            
+            // seems easier than reworking Airborne()
+            if(!damageReport.attackerMaster.GetBody().characterMotor.isGrounded)
             {
-                if (Airborne())
+                kills[playerNum]++;
+                if(IsComplete(playerNum))
                 {
-                    Chat.AddMessage("Is airborne");
-
-                    kills++;
-                    if (IsComplete())
-                    {
-                        Chat.AddMessage("Completed AirKills");
-                        CompleteTask();
-                        kills = 0;
-                    }
+                    Chat.AddMessage($"Player {playerNum} Completed AirKills");
+                    CompleteTask(playerNum);
+                    // What about getting 2nd place?
+                    ResetAllKills();
                 }
             }
         }
 
-        [ClientRpc]
-        void RpcOnKill(DamageReport damageReport)
+        void PlayerHitGround(int playerNum)
         {
-            // server calls this
-            // it runs on each client
-            // each client checks to see if the damage report has anything to do with them
-
-            // Can I just do this?
-            OnKill(damageReport);
+            Chat.AddMessage($"Player {playerNum} landed");
+            kills[playerNum] = 0;
         }
 
-        bool Airborne()
+        void ResetAllKills()
         {
-            // characterMotor.lastGroundTime
-            //CharacterMotor m;
-            //m.isGrounded
-            return !ownerCached.localUser.cachedBody.characterMotor.isGrounded;
-        }
-
-        public void OnLanding(ref CharacterMotor.HitGroundInfo hitGroundInfo)
-        {
-            Chat.AddMessage("Landing");
-            kills = 0;
-        }
-
-        [ClientRpc]
-        public void RpcOnLanding(ref CharacterMotor.HitGroundInfo hitGroundInfo)
-        {
-            // put this above
-            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += CmdOnLanding;
-
-            // would this work?
-            Chat.AddMessage("Landing Rpc");
-            kills = 0;
+            for (int i = 0; i < kills.Length; i++)
+            {
+                kills[i] = 0;
+            }
         }
     }
 }

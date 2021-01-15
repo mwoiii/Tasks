@@ -16,7 +16,7 @@ namespace Tasks
         public void OnDamage(float damage)
         {
             currentDamage += damage;
-            if(IsComplete())
+            if(IsComplete(0))
             {
                 CompleteTask();
             }

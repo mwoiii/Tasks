@@ -27,14 +27,14 @@ namespace Tasks
                 targets.Add(entity);
                 // can't use game object. Need to know when it dies
                 // entity.OnDeath += OnKill();
-                if(IsComplete())
+                if(IsComplete(0))
                 {
                     CompleteTask();
                 }
             }
         }
 
-        protected override bool IsComplete()
+        protected override bool IsComplete(int playerNum)
         {
             return targets.Count >= numToHit;
         }

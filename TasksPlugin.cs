@@ -43,15 +43,16 @@ namespace Tasks
         Task[] allTasks;
         Task[] currentTasks;
 
-        public static event Action<int> OnActivate;
+        public static event Action<int, int> OnActivate;
         public static event Action<int> OnDeactivate;
         public static event Action OnResetAll;
-        public static event Action OnPopup;
+        public static event Action<TaskType> OnPopup;
 
         Dictionary<uint, CharacterMaster> playerDict;
         // kinda bad form. There's already an array that holds the CharacterMasters. Why do I need to copy them?
         // I guess I can't guarentee it stays in the same order
-        List<CharacterMaster> playerCharacterMasters;
+        static List<CharacterMaster> playerCharacterMasters;
+        int totalNumPlayers = 0;
 
         int numTasks;
         Reward[] rewards;
@@ -64,15 +65,18 @@ namespace Tasks
         {
             Chat.AddMessage("Loaded Task plugin");
 
-            //TempAchievements temp = new TempAchievements();
-            //temp.Awake();
-            // all temp.Awake() does is:
-            //UnlockablesAPI.AddUnlockable<KillBeetle>(true);
+            /// ========= Client Stuff ==============================
             UnlockablesAPI.AddUnlockable<AirKills>(true);
+            // AirKills.OnCompletion doesn't get called on the clients I don't believe.
             AirKills.OnCompletion += TaskCompletion;
 
-            //KillBeetle.OnCompletion += TaskCompletion;
+            //NetworkServer.clien
+            
+            /// ========= Server Stuff ==============================
+            Run.onRunStartGlobal += GameSetup;
 
+            /*
+             * Old Setup. Moved to GameSetup
             playerDict = new Dictionary<uint, CharacterMaster>();
             playerCharacterMasters = new List<CharacterMaster>();
             Run.onRunStartGlobal += PopulatePlayerDictionary;
@@ -82,6 +86,7 @@ namespace Tasks
             numTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[numTasks];
             Run.onRunStartGlobal += GenerateTasks;
+            */
             // body is null if using onRunStartGlobal
             // this is probably run once per player
             //Run.onPlayerFirstCreatedServer += GenerateTasks;
@@ -151,6 +156,30 @@ namespace Tasks
             //SetupHooks();
         }
 
+        void GameSetup(Run run)
+        {
+            // run.livingPlayerCount
+            // run.participatingPlayerCount is this the total players?
+            if(!NetworkServer.active)
+            {
+                // this is the client
+                return;
+            }
+
+            Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
+            totalNumPlayers = run.participatingPlayerCount;
+            playerDict = new Dictionary<uint, CharacterMaster>();
+            playerCharacterMasters = new List<CharacterMaster>();
+            
+            PopulatePlayerDictionary();
+
+            PopulateTempItemLists();
+
+            numTasks = Enum.GetNames(typeof(TaskType)).Length;
+            rewards = new Reward[numTasks];
+            GenerateTasks(1);
+
+        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Start is automatically called by Unity")]
         private void Start() //Called at the first frame of the game.
@@ -167,8 +196,8 @@ namespace Tasks
                 if(OnActivate != null && !activated)
                 {
                     Chat.AddMessage("Trying to send Activate");
-
-                    OnActivate(1);
+                    // this should probably only work on the server
+                    OnActivate(1, totalNumPlayers);
                     activated = true;
                 }
             }
@@ -193,7 +222,7 @@ namespace Tasks
                 // Host has a NetworServer.Active be true
                 CharacterMaster.readOnlyInstancesList[0]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
                 CharacterMaster.readOnlyInstancesList[1]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
-                CmdGiveMyselfItem();
+                //CmdGiveMyselfItem();
                 //CharacterMaster.readOnlyInstancesList[0]?.inventory?.RemoveItem(ItemIndex.ArmorPlate);
 
             }
@@ -262,7 +291,7 @@ namespace Tasks
             if(Input.GetKeyDown(KeyCode.F7))
             {
                 Chat.AddMessage("Pressed F7");
-                CmdGiveMyselfItem();
+                //CmdGiveMyselfItem();
             }
         }
 
@@ -284,7 +313,7 @@ namespace Tasks
             };
         }
 
-        void PopulatePlayerDictionary(Run run)
+        void PopulatePlayerDictionary()
         {
             Chat.AddMessage("Trying to fill dictionary");
             //CharacterMaster.readOnlyInstancesList
@@ -306,7 +335,7 @@ namespace Tasks
             // localPlayer being false is weird
         }
 
-        void PopulateTempItemLists(Run run)
+        void PopulateTempItemLists()
         {
 
             TempItemLists = new List<TempItem>[CharacterMaster.readOnlyInstancesList.Count];
@@ -319,11 +348,11 @@ namespace Tasks
             }
         }
 
-        void GenerateTasks(Run run)
+        void GenerateTasks(int numTasks)
         {
 
             //StartTasks(1);
-            StartCoroutine(StartTasksWorkaround(1));
+            StartCoroutine(StartTasksWorkaround(numTasks));
         }
 
         IEnumerator StartTasksWorkaround(int numTasks)
@@ -344,20 +373,52 @@ namespace Tasks
                 Chat.AddMessage(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
                 // [Info   : Unity Log] Task: AirKills. Reward: TempItem, ArmorReductionOnHit
 
-                OnActivate?.Invoke(r);
+                OnActivate?.Invoke(r, totalNumPlayers);
             }
         }
 
-        void TaskCompletion(TaskType taskType, uint netID)
+        void TaskCompletion(TaskType taskType, int playerNum)
         {
             
-            Chat.AddMessage(playerDict[netID].name + " completed task " + taskType.ToString());
+            Chat.AddMessage("SERVER: Player "+playerNum + " completed task " + taskType.ToString());
             // this works at least
             activated = false;
             //GiveRandomItem(netID);
-            GiveReward(taskType, netID);
+            GiveReward(taskType, playerNum);
+            RpcTaskCompletion(taskType, playerNum);
         }
 
+        [ClientRpc]
+        void RpcTaskCompletion(TaskType taskType, int playerNum)
+        {
+            Chat.AddMessage("CLIENT: Player " + playerNum + " completed task " + taskType.ToString());
+            // if playerNum is me, I completed a task
+            // How do I map a client to a player number?
+            // show popup
+            if(GetPlayerCharacterMaster(playerNum).isLocalPlayer)
+                OnPopup?.Invoke(taskType);
+        }
+
+        public static int GetPlayerNumber(CharacterMaster charMaster)
+        {
+            //playerCharacterMasters
+            for (int i = 0; i < playerCharacterMasters.Count; i++)
+            {
+                if(playerCharacterMasters[i] == charMaster)
+                {
+                    return i;
+                }
+            }
+            Chat.AddMessage("CharMaster didn't match any players");
+            return -1;
+        }
+
+        public static CharacterMaster GetPlayerCharacterMaster(int playerNum)
+        {
+            return playerCharacterMasters[playerNum];
+        }
+
+        /*
         [Command]
         void CmdGiveMyselfItem()
         {
@@ -365,42 +426,44 @@ namespace Tasks
             // Assuming index 1 is player 2 (a client)
             CharacterMaster.readOnlyInstancesList[1].inventory.GiveItem(ItemIndex.Feather);
         }
+        */
 
-        void GiveRandomItem(uint ID)
+        void GiveRandomItem(int playerNum)
         {
             // Do I have to do something like this?
             //playerDict[ID].inventory.CallRpcItemAdded
-            playerDict[ID].inventory.GiveRandomItems(1);
+            playerCharacterMasters[playerNum].inventory.GiveRandomItems(1);
 
             // What is a reward?
             // could be an item, gold, xp, hp
         }
 
-        void GiveReward(TaskType task, uint ID)
+        void GiveReward(TaskType task, int playerNum)
         {
             if(rewards[(int)task].type == RewardType.Item)
             {
                 Chat.AddMessage("Giving item: " + rewards[(int)task].item.ToString("g"));
-                playerDict[ID].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
+                //playerDict[ID].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
             }
             else if(rewards[(int)task].type == RewardType.TempItem)
             {
-                playerDict[ID].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
                 // remove these items later
                 //Stage.onServerStageComplete += RemoveTempItems;
                 // Record what items to remove
-                RecordTempItems(ID, rewards[(int)task].item, rewards[(int)task].numItems);
+                RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
             }
             else
             {
                 // give gold or xp
                 // but for now, just give a random item
                 Chat.AddMessage("Giving Random Item");
-                GiveRandomItem(ID);
+                GiveRandomItem(playerNum);
             }
         }
 
-        void RecordTempItems(uint ID, ItemIndex item, int count)
+        void RecordTempItems(int playerNum, ItemIndex item, int count)
         {
             // ID is 6 for player 1
             // Don't know what the ID for player 2 is. Will it be 7?
@@ -409,9 +472,10 @@ namespace Tasks
             // So maybe an array of lists was bad
             // Maybe a dict of lists would be better. Then I could use the ID
 
-            int playerNum = -1;
+            //int playerNum = -1;
             // try to figure out which player ID matches which player in the list
             // This might be an even stupider way to do it
+            /*
             for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
             {
                 if(playerDict[ID] == CharacterMaster.readOnlyInstancesList[i])
@@ -419,6 +483,7 @@ namespace Tasks
                     playerNum = i;
                 }
             }
+            */
             if(playerNum < 0)
             {
                 Chat.AddMessage("Didn't find a match. Couldn't record items");
