@@ -110,19 +110,22 @@ namespace Tasks
             return false;
         }
 
-        void ShowPopup()
+        void ShowPopup(int taskTypeInt)
         {
-            // how to make this run on the client?
-            //CharacterMaster m;
-            //TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<UserProfile>().AddAchievement(this.achievementDef.identifier, false);
-            profile.AddAchievement(this.achievementDef.identifier, false);
+            if (taskTypeInt == (int)type)
+            {
+                // how to make this run on the client?
+                //CharacterMaster m;
+                //TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<UserProfile>().AddAchievement(this.achievementDef.identifier, false);
+                profile.AddAchievement(this.achievementDef.identifier, false);
+            }
         }
 
         void ShowPopup(TaskType t)
         {
             if(t == type)
             {
-                ShowPopup();
+                ShowPopup((int)t);
             }
         }
 

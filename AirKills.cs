@@ -80,8 +80,12 @@ namespace Tasks
             
             for (int i = 0; i < totalNumberPlayers; i++)
             {
-                
-                Chat.AddMessage($"Set hooks for player {i}");
+                CharacterMaster current = TasksPlugin.GetPlayerCharacterMaster(i);
+                if (current is null) break;
+                if (current.GetBody() is null) break;
+                if (current.GetBody().characterMotor is null) break;
+
+                //Chat.AddMessage($"Set hooks for player {i}");
                 // is it a weird timing thing?
                 // like when onHitGround eventually gets called, it just finds what i was last instead of what it was when this was first added. Like lazy evaluation
                 // I think I was right. When I set i=5 after this, when I hit the ground, it said player 6 did it (which is what i was last)
@@ -91,10 +95,12 @@ namespace Tasks
                 // so the i isn't inside the loop like this temp is.
                 int tempInt = i;
 
+                //Chat.AddMessage($"Hook Status. Player {tempInt} CharacterMaster: {TasksPlugin.GetPlayerCharacterMaster(i)} Body: {TasksPlugin.GetPlayerCharacterMaster(i).GetBody()} Motor: {TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor}");
+
                 // to get it to remove itself, I need to store the delegate in a list
                 CharacterMotor.HitGroundDelegate myDel = (ref CharacterMotor.HitGroundInfo _) => PlayerHitGround(tempInt);
                 groundDelegateList.Add(myDel);
-                TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround += groundDelegateList[tempInt];
+                current.GetBody().characterMotor.onHitGround += groundDelegateList[tempInt];
                 // this version works, but I can't unsub it
                 //TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround += (ref CharacterMotor.HitGroundInfo _) => PlayerHitGround(tempInt);
             }
@@ -106,9 +112,20 @@ namespace Tasks
 
             for (int i = 0; i < totalNumberPlayers; i++)
             {
+                CharacterMaster current = TasksPlugin.GetPlayerCharacterMaster(i);
+                if (current is null) break;
+                if (current.GetBody() is null) break;
+                if (current.GetBody().characterMotor is null) break;
+                // I don't think I need to worry about unsubscribing when one of the players dies
+                // Because onHitGround is probably destroyed/reset anyway.
+
                 // delegate list is created when it's hooked up. This might break if unhook is called before setHooks
                 int tempInt = i;
-                TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor.onHitGround -= groundDelegateList[tempInt];
+                //Chat.AddMessage($"Unhook Status. Player {tempInt} CharacterMaster: {TasksPlugin.GetPlayerCharacterMaster(i)} Body: {TasksPlugin.GetPlayerCharacterMaster(i).GetBody()} Motor: {TasksPlugin.GetPlayerCharacterMaster(i).GetBody().characterMotor}");
+                //Chat.AddMessage()
+
+                // seems like this breaks if one of the players is dead
+                current.GetBody().characterMotor.onHitGround -= groundDelegateList[tempInt];
             }
 
             base.Unhook();
@@ -147,7 +164,7 @@ namespace Tasks
 
         void PlayerHitGround(int playerNum)
         {
-            Chat.AddMessage($"Player {playerNum} landed");
+            //Chat.AddMessage($"Player {playerNum} landed");
             kills[playerNum] = 0;
         }
 

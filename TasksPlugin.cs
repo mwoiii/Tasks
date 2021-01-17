@@ -11,24 +11,18 @@ using R2API.Utils;
 using System.Collections.Generic;
 using System.Collections;
 using System.Collections.ObjectModel;
+using MiniRpcLib;
+using MiniRpcLib.Action;
 
-/// <summary>
-/// Things to do: 
-///     Make sure your references are located in a "libs" folder that's sitting next to the project folder.
-///         This folder structure was chosen as it was noticed to be one of the more common structures.
-///     Add a NuGet Reference to Mono.Cecil. The one included in bepinexpack3.0.0 on thunderstore is the wrong version 0.10.4. You want 0.11.1.
-///         You can do this by right clicking your project (not your solution) and going to "Manage NuGet Packages".
-///    Make sure the AUTHOR field is correct.
-///    Make sure the MODNAME field is correct.
-///    Delete this comment!
-///    Oh and actually write some stuff.
-/// </summary>
+// Networking stuff. Tutorials and examples
+// https://github.com/risk-of-thunder/R2Wiki/wiki/Networking-&-Multiplayer-mods-(MiniRPCLib)
 
 
 
 namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
+    [BepInDependency(MiniRpcPlugin.Dependency)]
     [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
@@ -40,13 +34,16 @@ namespace Tasks
             GUID = "com." + AUTHOR + "." + MODNAME,
             VERSION = "0.0.0";
 
-        Task[] allTasks;
-        Task[] currentTasks;
+        //Task[] allTasks;
+        //Task[] currentTasks;
 
         public static event Action<int, int> OnActivate;
         public static event Action<int> OnDeactivate;
         public static event Action OnResetAll;
-        public static event Action<TaskType> OnPopup;
+        public static event Action<int> OnPopup;
+
+        public IRpcAction<int> taskCompletionClient { get; set; }
+        public IRpcAction<int[]> updateTasksClient { get; set; }
 
         Dictionary<uint, CharacterMaster> playerDict;
         // kinda bad form. There's already an array that holds the CharacterMasters. Why do I need to copy them?
@@ -57,6 +54,9 @@ namespace Tasks
         int numTasks;
         Reward[] rewards;
         List<TempItem>[] TempItemLists;
+
+        // Client
+        TaskType[] currentTasks;
 
         bool activated = false;
         
@@ -74,6 +74,33 @@ namespace Tasks
             
             /// ========= Server Stuff ==============================
             Run.onRunStartGlobal += GameSetup;
+
+
+
+            /// ========= Client Stuff ==============================
+            // Can this live in awake?
+            // or should I put it in the cosntructor
+            var miniRpc = MiniRpc.CreateInstance(GUID);
+            taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            {
+                // code that runs on the client
+                // user specifies which user I believe so I don't have to check
+                Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
+                OnPopup?.Invoke(task);
+
+            });
+
+            // Server sends the list of tasks to all clients
+            // How do I send the data? an array of (int)TaskTypes?
+            updateTasksClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int[] tasks) =>
+            {
+                currentTasks = new TaskType[tasks.Length];
+                for (int i = 0; i < tasks.Length; i++)
+                {
+                    currentTasks[i] = (TaskType)tasks[i];
+                }
+                // Display tasks in UI/chat/whatever so the player can see what they have to do
+            });
 
             /*
              * Old Setup. Moved to GameSetup
@@ -307,8 +334,8 @@ namespace Tasks
                 orig(self);
                 if (self.attackerTeamIndex == TeamIndex.Player)
                 {
-                    DealDamageInTime d = (DealDamageInTime)allTasks[1];
-                    d.OnDamage(self.damageDealt);
+                    //DealDamageInTime d = (DealDamageInTime)allTasks[1];
+                    //d.OnDamage(self.damageDealt);
                 }
             };
         }
@@ -364,16 +391,30 @@ namespace Tasks
 
         void StartTasks(int numTasks)
         {
+            int[] taskIDNumbers = new int[numTasks];
             for (int i = 0; i < numTasks; i++)
             {
                 // 0 in the enum is the base case
                 int r = UnityEngine.Random.Range(1, Enum.GetNames(typeof(TaskType)).Length);
+
+                // check to see if the tasks are unique
+                // current system probably doesn't work with multiple tasks of the same type.
+                // Is there anything I can do about that?
+
+                taskIDNumbers[i] = r;
 
                 rewards[r] = CreateRandomReward();
                 Chat.AddMessage(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
                 // [Info   : Unity Log] Task: AirKills. Reward: TempItem, ArmorReductionOnHit
 
                 OnActivate?.Invoke(r, totalNumPlayers);
+            }
+
+            // taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
+            for (int i = 0; i < totalNumPlayers; i++)
+            {
+                // Send a list of all tasks to all players
+                updateTasksClient.Invoke(taskIDNumbers, NetworkUser.readOnlyInstancesList[i]);
             }
         }
 
@@ -385,18 +426,24 @@ namespace Tasks
             activated = false;
             //GiveRandomItem(netID);
             GiveReward(taskType, playerNum);
-            RpcTaskCompletion(taskType, playerNum);
+            //RpcTaskCompletion(taskType, playerNum);
+            // This should send the message to the client
+            // Why is it backwards from how I wrote it? Weird
+            // Does this run on each client or jsut the specific one?
+            taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
         }
 
         [ClientRpc]
         void RpcTaskCompletion(TaskType taskType, int playerNum)
         {
-            Chat.AddMessage("CLIENT: Player " + playerNum + " completed task " + taskType.ToString());
+            Chat.AddMessage("CLIENT: Player " + playerNum + " completed task " + taskType.ToString() + ". Is local? "+ GetPlayerCharacterMaster(playerNum).isLocalPlayer);
             // if playerNum is me, I completed a task
             // How do I map a client to a player number?
             // show popup
             if(GetPlayerCharacterMaster(playerNum).isLocalPlayer)
-                OnPopup?.Invoke(taskType);
+                //OnPopup?.Invoke(taskType);
+
+            taskCompletionClient.Invoke((int)taskType);
         }
 
         public static int GetPlayerNumber(CharacterMaster charMaster)
