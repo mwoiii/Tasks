@@ -8,6 +8,7 @@ namespace Tasks
 {
     class AirKills : Task
     {
+        public static new string description { get; } = "Get 3 kills whilst airborne";
 
         // so doing just this doesn't seem to work
         //protected static new string thisClass = "AIR_KILLS_";
@@ -18,7 +19,7 @@ namespace Tasks
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
         public override string PrerequisiteUnlockableIdentifier { get; } = "";
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = "Get 3 kills whilst airborne"; // plain English
+        public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
 
         //protected override int _id { get; } = 1;

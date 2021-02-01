@@ -1,6 +1,7 @@
 ﻿using System;
 using BepInEx;
 using RoR2;
+using RoR2.UI;
 using UnityEngine;
 using UnityEngine.Networking;
 using Mono.Cecil.Cil;
@@ -43,7 +44,8 @@ namespace Tasks
         public static event Action<int> OnPopup;
 
         public IRpcAction<int> taskCompletionClient { get; set; }
-        public IRpcAction<int[]> updateTasksClient { get; set; }
+        //public IRpcAction<int[]> updateTasksClient { get; set; }
+        public IRpcAction<TaskInfo> updateTaskClient { get; set; }
 
         Dictionary<uint, CharacterMaster> playerDict;
         // kinda bad form. There's already an array that holds the CharacterMasters. Why do I need to copy them?
@@ -56,10 +58,15 @@ namespace Tasks
         List<TempItem>[] TempItemLists;
 
         // Client
-        TaskType[] currentTasks;
+        TaskInfo[] currentTasks;
+        GameObject[] tasksUIObjects;
 
         bool activated = false;
-        
+
+        HUD hud;
+        ObjectivePanelController panel;
+        GameObject oTrackerPrefabCopy;
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
         {
@@ -87,100 +94,230 @@ namespace Tasks
                 // user specifies which user I believe so I don't have to check
                 Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
                 OnPopup?.Invoke(task);
-
+                RemoveObjectivePanel(task);
             });
 
             // Server sends the list of tasks to all clients
             // How do I send the data? an array of (int)TaskTypes?
-            updateTasksClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int[] tasks) =>
+            // array is not serializable
+            // [Error  : Unity Log] NotSupportedException: Type System.Int32[] is not a valid argument type. If this is a type of yours, please implement INetworkSerializable.
+            // try a list instead?
+            // Or just have it work for a single task at a time and have the server call it multiple times
+            // Justs swapping it now so I don't get errors
+            // updateTasksClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int[] tasks) =>
+            updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
             {
-                currentTasks = new TaskType[tasks.Length];
-                for (int i = 0; i < tasks.Length; i++)
+                Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
+                if(currentTasks is null || currentTasks.Length != taskInfo.total)
                 {
-                    currentTasks[i] = (TaskType)tasks[i];
+                    currentTasks = new TaskInfo[taskInfo.total];
                 }
-                // Display tasks in UI/chat/whatever so the player can see what they have to do
+
+                currentTasks[taskInfo.index] = taskInfo;
+
+
+                UpdateTasksUI();
             });
 
+            // do this instead?
+            // this would go in awake
+            //On.RoR2.UI.ObjectivePanelController.Update += somehting?
+
+            // option 3
             /*
-             * Old Setup. Moved to GameSetup
-            playerDict = new Dictionary<uint, CharacterMaster>();
-            playerCharacterMasters = new List<CharacterMaster>();
-            Run.onRunStartGlobal += PopulatePlayerDictionary;
-
-            Run.onRunStartGlobal += PopulateTempItemLists;
-
-            numTasks = Enum.GetNames(typeof(TaskType)).Length;
-            rewards = new Reward[numTasks];
-            Run.onRunStartGlobal += GenerateTasks;
+            // Doesn't work at awake
+            GameObject myPrefab = panel.objectiveTrackerPrefab;
+            myPrefab.SetFieldValue("cachedString", "Some text");
+            panel.InvokeMethod("AddObjectiveTracker", panel.objectiveTrackerPrefab);
             */
-            // body is null if using onRunStartGlobal
-            // this is probably run once per player
-            //Run.onPlayerFirstCreatedServer += GenerateTasks;
-
-            // Might be useful to tell when stages start and end
-            //Stage.onServerStageBegin
-            //Stage.onServerStageComplete
-
-
-            // Sounds like I'd only get local and not necessarily current
-            //UserProfile.GetAvailableProfileNames()
-            //UserProfile.GetProfile(name)
-
-
-
-            // maybe this is how I can give people items
-            //CharacterMaster.readOnlyInstancesList[0].inventory.GiveItem(ItemIndex.ArmorPlate);
-
-
-            //CharacterMaster.readOnlyInstancesList
-
-            //KillBeetle beetle = new KillBeetle();
-            //beetle.Revoke();
-            // Doesn't make it here
-            // but doesn't throw any errors either....
-            //Chat.AddMessage("Tried to Revoke the beetle achievement");
-
-            //TempAchievements tempA = new TempAchievements();
-            //tempA.Awake();
-
-            /*
-            allTasks = new Task[10];
-            currentTasks = new Task[10];
-
-            allTasks[0] = new StayInAir();
-            allTasks[1] = new DealDamageInTime();
             
-            foreach (Task t in allTasks)
+
+            On.RoR2.UI.HUD.Awake += (self, orig) =>
             {
-                //t.Init();
+                self(orig);
+                hud = orig;
+
+                // this is null at awake
+                // so none of this runs
+                panel = FindObjectOfType<ObjectivePanelController>();
+                if (panel != null)
+                {
+                    GameObject go = Instantiate(panel.objectiveTrackerPrefab, orig.objectivePanelController.transform);
+                    oTrackerPrefabCopy = go;
+                    if (go is null)
+                    {
+                        Chat.AddMessage("Game object was not instantiated");
+                        return;
+                    }
+
+                    TMPro.TextMeshProUGUI textMeshLabel = go.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+                    if(textMeshLabel != null)
+                    {
+                        textMeshLabel.text = "Test Text";
+                        textMeshLabel.color = Color.blue;
+                        Chat.AddMessage($"Everything worked. GO trans: {go.transform.position}");
+                    }
+                    else
+                    {
+                        Chat.AddMessage("text mesh was null at awake");
+                    }
+                    /// stuff to hook my transform below?
+                    //On.RoR2.UI.ChargeIndicatorController
+                    //On.RoR2.UI.DifficultyBarController
+
+                }
+                else
+                {
+                    Chat.AddMessage("panel was null at awake");
+                }
+
+                // Create my UI
+                // parent it to the right position. I wonder if that will make it move as the game objectives container scales? Or will I have to do that?
+                // do myRect.transform instead of just transform
+                //transform.SetParent(orig.objectivePanelController.transform, false);
+                
+            };
+            // From corpseBloom mod example. But there is no Start.....
+            //Add reserveUI to HealthBar
+            /*
+            On.RoR2.UI.HUD.Start += (self, orig) =>
+            {
+                self(orig);
+                initializeReserveUI();
+                reserveRect.transform.SetParent(orig.healthBar.transform, false);
+                hpBar = orig.healthBar;
+            };
+            */
+        }
+
+        private void UpdateTasksUI()
+        {
+            if(panel is null)
+                panel = FindObjectOfType<ObjectivePanelController>();
+
+            if(tasksUIObjects is null || tasksUIObjects.Length != currentTasks.Length)
+            {
+                tasksUIObjects = new GameObject[currentTasks.Length];
             }
 
-            /*
-            void Start() {
-	
-		        // Do I have to populate it like this?
-		        // maybe I could use a file like json or xml
-		        allTasks[0] = new StayInAir();
-		        allTasks[1] = new DamageMultipleEnemies();
-	
-		        game.OnLevelLoad += RandomizeTasks();
-		        game.OnTeleStarted += RandomizeTeleTasks();
-		
-		        // Do I subscribe to all events here
-		        // and then just call the relevent tasks
-		        // like
-		        game.OnDamage += OnDamage
-		        OnDamage()
-		        {
-			        foreach(Task t in currentTasks)
-				        t.OnDamage()
-		        }
-	        }
-            */
+            if (panel != null)
+            {
+                for (int i = 0; i < currentTasks.Length; i++)
+                {
+                    if (currentTasks[i] is null)
+                        break;
 
-            //RandomizeTasks();
-            //SetupHooks();
+                    tasksUIObjects[i] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+                    if (tasksUIObjects[i] is null)
+                    {
+                        Chat.AddMessage("Task UI object was not instantiated");
+                        return;
+                    }
+                    tasksUIObjects[i].SetActive(true);
+                    TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[i].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+                    if (textMeshLabel != null)
+                    {
+                        textMeshLabel.text = currentTasks[i].description;
+                    }
+                }
+            }
+            else
+            {
+                Chat.AddMessage("Panel is null");
+            }
+        }
+
+        void TrySpawnObjectivePanel()
+        {
+
+            // HOLY SHIT THIS ACTUALLY WORKS
+            // Stuff gets added to the list
+            // and when I activate the tp, the tp stuff gets added to the top of the list (above my stuff)
+            // and it auto scales
+            // It gives my stuff a check box which I may or may not want
+
+
+            if(panel is null)
+                panel = FindObjectOfType<ObjectivePanelController>();
+
+            if (panel != null)
+            {
+                oTrackerPrefabCopy = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+                if (oTrackerPrefabCopy is null)
+                {
+                    Chat.AddMessage("Game object was not instantiated");
+                    return;
+                }
+                oTrackerPrefabCopy.SetActive(true);
+                TMPro.TextMeshProUGUI textMeshLabel = oTrackerPrefabCopy.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+                if (textMeshLabel != null)
+                {
+                    textMeshLabel.text = "Test Text";
+                    //textMeshLabel.color = Color.blue;
+                    Chat.AddMessage($"Everything worked. oTrackerCopy trans: {oTrackerPrefabCopy.transform.position}");
+                }
+                else
+                {
+                    Chat.AddMessage("text mesh was null");
+                }
+                /// stuff to hook my transform below?
+                //On.RoR2.UI.ChargeIndicatorController
+                //On.RoR2.UI.DifficultyBarController
+
+            }
+            else
+            {
+                Chat.AddMessage("panel was null");
+            }
+        }
+
+        void TryRemoveObjectivePanel()
+        {
+            Chat.AddMessage("Relevant to false");
+            /*
+            [Info   : Unity Log] Pressed F9
+            [Info   : Unity Log] Relevant to false
+            [Error  : Unity Log] NullReferenceException: Object reference not set to an instance of an object
+            Stack trace:
+            Tasks.TasksPlugin.TryRemoveObjectivePanel () (at <46d8c65121e141b08ec2478de3748596>:0)
+            Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
+             */
+            oTrackerPrefabCopy.GetComponent<ObjectivePanelController.ObjectiveTracker>().isRelevant = false;
+        }
+
+        void TryRemoveObjectivePanel2()
+        {
+            Chat.AddMessage("Active to false");
+            // ONLY ONE THAT WORKED
+            oTrackerPrefabCopy.SetActive(false);
+        }
+        void TryRemoveObjectivePanel3()
+        {
+            Chat.AddMessage("Retired");
+            /*
+            [Info   : Unity Log] Pressed F11
+            [Info   : Unity Log] Retired
+            [Error  : Unity Log] NullReferenceException: Object reference not set to an instance of an object
+            Stack trace:
+            Tasks.TasksPlugin.TryRemoveObjectivePanel3 () (at <46d8c65121e141b08ec2478de3748596>:0)
+            Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
+             */
+            // This is a class in a class
+            // It can't be a component.....
+            // it doesn't even extend monobehaviour
+            oTrackerPrefabCopy.GetComponent<ObjectivePanelController.ObjectiveTracker>().Retire();
+        }
+
+        void RemoveObjectivePanel(int taskType)
+        {
+            for (int i = 0; i < tasksUIObjects.Length; i++)
+            {
+                if(currentTasks[i].taskType == taskType)
+                {
+                    // Do something to show it was completed other than just hiding it
+                    tasksUIObjects[i].SetActive(false);
+                }
+            }
         }
 
         void GameSetup(Run run)
@@ -205,7 +342,11 @@ namespace Tasks
             numTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[numTasks];
             GenerateTasks(1);
-
+            // How to generate tasks later maybe
+            // RoR2.UI.ObjectivePanelController
+            // Line 102
+            // TeleporterInteraction instance = TeleporterInteraction.instance;
+            // if (instance.isCharged && !instance.isInFinalSequence)
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Start is automatically called by Unity")]
@@ -318,7 +459,48 @@ namespace Tasks
             if(Input.GetKeyDown(KeyCode.F7))
             {
                 Chat.AddMessage("Pressed F7");
-                //CmdGiveMyselfItem();
+                //TrySpawnObjectivePanel();
+                
+            }
+            if(Input.GetKeyDown(KeyCode.F8))
+            {
+                Chat.AddMessage("Pressed F8");
+                RemoveObjectivePanel((int)TaskType.AirKills);
+
+                // DOES NOT WORK
+                /*
+                [Info   : Unity Log] Pressed F8
+                [Error  : Unity Log] Exception: Could not find FieldInfo on UnityEngine.GameObject with the name cachedString
+                Stack trace:
+                R2API.Utils.Reflection+<>c__DisplayClass18_0.<GetFieldCached>b__0 (System.ValueTuple`2[T1,T2] x) (at <9e56c0ad50a94360869661ef606f8608>:0)
+                R2API.Utils.Reflection.GetOrAddOnNull[TKey,TValue] (System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue] dict, TKey key, System.Func`2[T,TResult] factory) (at <9e56c0ad50a94360869661ef606f8608>:0)
+                R2API.Utils.Reflection.GetFieldCached (System.Type T, System.String name) (at <9e56c0ad50a94360869661ef606f8608>:0)
+                R2API.Utils.Reflection.SetFieldValue[TValue] (System.Object instance, System.String fieldName, TValue value) (at <9e56c0ad50a94360869661ef606f8608>:0)
+                Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
+                 
+                GameObject myPrefab = panel.objectiveTrackerPrefab;
+                // will this work before I instantiate it?
+                // also only works if isDirty is true. I don't know if it will be
+                myPrefab.SetFieldValue("cachedString", "Some text");
+                panel.InvokeMethod("AddObjectiveTracker", panel.objectiveTrackerPrefab);
+                */
+            }
+            if(Input.GetKeyDown(KeyCode.F9))
+            {
+                Chat.AddMessage("Pressed F9");
+                // Nope
+                //TryRemoveObjectivePanel();
+            }
+            if (Input.GetKeyDown(KeyCode.F10))
+            {
+                Chat.AddMessage("Pressed F10");
+                //TryRemoveObjectivePanel2();
+            }
+            if (Input.GetKeyDown(KeyCode.F11))
+            {
+                Chat.AddMessage("Pressed F11");
+                // Nope
+                //TryRemoveObjectivePanel3();
             }
         }
 
@@ -410,12 +592,146 @@ namespace Tasks
                 OnActivate?.Invoke(r, totalNumPlayers);
             }
 
+            Chat.AddMessage("Trying to make a notification");
+            Notification n = gameObject.AddComponent<Notification>();
+            n.enabled = false;
+            n.GetDescription = () => "1920/2, 1080/2";
+            n.GetTitle = () => "Title: Middle";
+            //n.SetPosition(new Vector3(5f, 1f, 0));
+            //n.GenericNotification.GetComponent<RectTransform>().SetParent(NotificationQueue.readOnlyInstancesList[0].GetComponent<RectTransform>(), false);
+            //n.Parent = NotificationQueue.readOnlyInstancesList[0].transform;
+            n.enabled = true;
+
+            // Bottom middle of the notification is the center of the screen
+            // Text is left aligned to the box so the text isn't in the center
+            StartCoroutine(MoveNotificationLater(n, new Vector3(1920f/2, 1080f/2, 0)));
+
+            //CameraRigController.readOnlyInstancesList[0].hud.objectivePanelController.objectiveTrackerContainer
+
+            //TestNotifications();
+
+            //Chat.AddMessage("Picking up some items");
+            PickupIndex p = new PickupIndex(ItemIndex.Hoof);
+            //PickupIndex p2 = PickupCatalog.FindPickupIndex(ItemIndex.Hoof.ToString());
+            if (p != null)
+            {
+                //Chat.AddMessage("P");
+                // This works
+                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(0), p);
+                //Chat.AddMessage($"Positions: {NotificationQueue.readOnlyInstancesList[0].}")
+                // this.currentNotification.GetComponent<RectTransform>().SetParent(base.GetComponent<RectTransform>(), false);
+            }
+            /*
+            if (p2 != null)
+            {
+                //Chat.AddMessage("P2");
+                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(0), p2);
+            }
+            */
+
             // taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
             for (int i = 0; i < totalNumPlayers; i++)
             {
+
+                if(NetworkUser.readOnlyInstancesList is null)
+                {
+                    Chat.AddMessage("List is null");
+                    return;
+                }
                 // Send a list of all tasks to all players
-                updateTasksClient.Invoke(taskIDNumbers, NetworkUser.readOnlyInstancesList[i]);
+                if (NetworkUser.readOnlyInstancesList.Count > 0)
+                {
+                    Chat.AddMessage($"Count is {NetworkUser.readOnlyInstancesList.Count}");
+                    // the ?. seems to fix the null errors.
+                    // But why does this one not work when the taskCompleted one does?
+                    //TaskInfo info = new TaskInfo()
+                    //updateTaskClient?.Invoke(taskIDNumbers[0], NetworkUser.readOnlyInstancesList[i]);
+                    for (int j = 0; j < taskIDNumbers.Length; j++)
+                    {
+                        TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length);
+                        updateTaskClient?.Invoke(info, NetworkUser.readOnlyInstancesList[i]);
+                    }
+                }
+                else
+                {
+                    Chat.AddMessage("No network users");
+                }
             }
+        }
+
+        string GetTaskDescription(int taskType)
+        {
+            switch((TaskType)taskType)
+            {
+                case TaskType.AirKills:
+                    return AirKills.description;
+            }
+
+            return "";
+        }
+
+        private void TestNotifications()
+        {
+            for (int i = 0; i < 11; i++)
+            {
+                for (int j = 0; j < 6; j++)
+                {
+                    int tempi = i;
+                    int tempj = j;
+
+                    GameObject go = new GameObject($"TestNotification {tempi}{tempj}");
+                    //go.transform.position = NotificationQueue.readOnlyInstancesList[0].transform.position + new Vector3(i / 3f, j / 3f, 0);
+                    Notification n = go.AddComponent<Notification>();
+                    n.enabled = false;
+                    n.GetDescription = () => $"Description: {tempi*200}, {tempj*200}";
+                    n.GetTitle = () => $"Title: {tempi}, {tempj}";
+                    //n.SetPosition(new Vector3(i/3f, j/3f, 0));
+                    //n.Parent = NotificationQueue.readOnlyInstancesList[0].transform;
+                    //n.Parent = go.transform;
+                    n.enabled = true;
+
+                    // Seems like these correspond to 1920x1080
+                    StartCoroutine(MoveNotificationLater(n, new Vector3(tempi * 200, tempj * 200, 0)));
+                    //StartCoroutine(SetupParentLater(n, go.transform));
+                    //n.enabled = true;
+                    // I think awake gets called last
+                    // so there is no rootObject to move
+                    // I think I need to setn.Parent to the right pos
+                    // parent is Parent = RoR2Application.instance.mainCanvas.transform;
+                    // but awake resets it
+                }
+            }
+        }
+
+        IEnumerator SetupParentLater(Notification n, Transform parent)
+        {
+            // this.currentNotification.GetComponent<RectTransform>().SetParent(base.GetComponent<RectTransform>(), false);
+
+            yield return null;
+            n.Parent = parent;
+        }
+
+        IEnumerator MoveNotificationLater(Notification n, Vector3 movement, bool overTime=false)
+        {
+            //Chat.AddMessage("Trying to move the notification");
+            yield return new WaitForSeconds(0.2f);
+            
+
+            // move over time
+            if (overTime)
+            {
+                while (n != null)
+                {
+                    n.GenericNotification.transform.position += movement;
+                    yield return null; // skip a frame
+                    yield return null;
+                }
+            }
+            else
+            {
+                n.GenericNotification.transform.position = movement;
+            }
+            //n.SetPosition(movement);
         }
 
         void TaskCompletion(TaskType taskType, int playerNum)
@@ -665,6 +981,43 @@ namespace Tasks
         }
 
         public enum RewardType { Item, TempItem, Gold, Xp };
+
+        public class TaskInfo : MessageBase
+        {
+            public int taskType;
+            public string description;
+            public bool completed;
+            public int index;
+            public int total;
+
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write(taskType);
+                writer.Write(description);
+                writer.Write(completed);
+                writer.Write(index);
+                writer.Write(total);
+            }
+
+            public override void Deserialize(NetworkReader reader)
+            {
+                taskType = reader.ReadInt32();
+                description = reader.ReadString();
+                completed = reader.ReadBoolean();
+                index = reader.ReadInt32();
+                total = reader.ReadInt32();
+            }
+            public TaskInfo(int _type, string _description, bool _completed, int _index, int _total)
+            {
+                taskType = _type;
+                description = _description;
+                completed = _completed;
+                index = _index;
+                total = _total;
+            }
+
+            public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
+        }
     }
     public enum TaskType { Base, AirKills };
 

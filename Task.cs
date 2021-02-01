@@ -20,6 +20,8 @@ namespace Tasks
         static string myName = "SOLRUN_";
         static string myMod = "TASKS_";
         protected static string thisClass = "BASE_TASK_";
+        public static string description { get; } = "Base description";
+
         public override string AchievementIdentifier { get; } = myName + myMod + thisClass + "ACHIEVEMENT_ID";
         public override string UnlockableIdentifier { get; } = myName + myMod + thisClass + "REWARD_ID";
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
