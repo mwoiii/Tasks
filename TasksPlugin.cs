@@ -53,7 +53,7 @@ namespace Tasks
         static List<CharacterMaster> playerCharacterMasters;
         int totalNumPlayers = 0;
 
-        int numTasks;
+        int totalNumTasks;
         Reward[] rewards;
         List<TempItem>[] TempItemLists;
 
@@ -72,21 +72,42 @@ namespace Tasks
         {
             Chat.AddMessage("Loaded Task plugin");
 
-            /// ========= Client Stuff ==============================
+            On.RoR2.UserProfile.HasAchievement += (orig, self, param) =>
+            {
+                // This seems to work
+                // It clears tasks when you load the game
+                // Also when the task is activated
+                // And when the game ends (when the game writes stats I think)
+                // When you go to the logbook in the menu
+                // It does get called a few times more than is really needed, but that's probably not a big performance hit
+                // to revoke a task more often than is needed
+
+                // Bc the tasks are temporary achievements, I never really want you to 'have' them. 
+                // Achievements are a one-and-done thing. Having them implies they are over, but the tasks are reuseable
+                // if HasAchievement() returns true, the game basically ignores it. So I just never let it return true for my tasks
+                // It might have some problems in the future
+                if(param.Contains("SOLRUN"))
+                {
+                    //Chat.AddMessage($"Matched Solrun. Removing Achievement: {param}");
+                    self.RevokeAchievement(param);
+                }
+                return orig(self, param);
+            };
+
+
             UnlockablesAPI.AddUnlockable<AirKills>(true);
             // AirKills.OnCompletion doesn't get called on the clients I don't believe.
             AirKills.OnCompletion += TaskCompletion;
 
-            //NetworkServer.clien
-            
-            /// ========= Server Stuff ==============================
+            UnlockablesAPI.AddUnlockable<DamageMultipleTargets>(true);
+            // OnCompletion is static for all tasks
+            // and already accounts for knowing which task was completed
+            // so I only need to sub to it once, not once for each different task
+            //DamageMultipleTargets.OnCompletion += TaskCompletion;
+
             Run.onRunStartGlobal += GameSetup;
 
 
-
-            /// ========= Client Stuff ==============================
-            // Can this live in awake?
-            // or should I put it in the cosntructor
             var miniRpc = MiniRpc.CreateInstance(GUID);
             taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
             {
@@ -207,10 +228,15 @@ namespace Tasks
                     if (currentTasks[i] is null)
                         break;
 
-                    tasksUIObjects[i] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+                    // Check if it already exists before making a new one
                     if (tasksUIObjects[i] is null)
                     {
-                        Chat.AddMessage("Task UI object was not instantiated");
+                        Chat.AddMessage($"Creating UI object for the first time. i: {i}");
+                        tasksUIObjects[i] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+                    }
+                    if (tasksUIObjects[i] is null)
+                    {
+                        Chat.AddMessage("Task UI object was not instantiated"); 
                         return;
                     }
                     tasksUIObjects[i].SetActive(true);
@@ -339,9 +365,9 @@ namespace Tasks
 
             PopulateTempItemLists();
 
-            numTasks = Enum.GetNames(typeof(TaskType)).Length;
-            rewards = new Reward[numTasks];
-            GenerateTasks(1);
+            totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
+            rewards = new Reward[totalNumTasks];
+            GenerateTasks(2);
             // How to generate tasks later maybe
             // RoR2.UI.ObjectivePanelController
             // Line 102
@@ -573,25 +599,93 @@ namespace Tasks
 
         void StartTasks(int numTasks)
         {
-            int[] taskIDNumbers = new int[numTasks];
-            for (int i = 0; i < numTasks; i++)
+            int[] taskIDNumbers = GetRandomUniqueTasks(numTasks);
+            for (int i = 0; i < taskIDNumbers.Length; i++)
             {
-                // 0 in the enum is the base case
-                int r = UnityEngine.Random.Range(1, Enum.GetNames(typeof(TaskType)).Length);
+                rewards[taskIDNumbers[i]] = CreateRandomReward();
 
-                // check to see if the tasks are unique
-                // current system probably doesn't work with multiple tasks of the same type.
-                // Is there anything I can do about that?
-
-                taskIDNumbers[i] = r;
-
-                rewards[r] = CreateRandomReward();
+                // These 2 lines for debugging
+                int r = taskIDNumbers[i];
                 Chat.AddMessage(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
-                // [Info   : Unity Log] Task: AirKills. Reward: TempItem, ArmorReductionOnHit
 
-                OnActivate?.Invoke(r, totalNumPlayers);
+                OnActivate?.Invoke(taskIDNumbers[i], totalNumPlayers);
             }
 
+            // taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
+            for (int i = 0; i < totalNumPlayers; i++)
+            {
+
+                if(NetworkUser.readOnlyInstancesList is null)
+                {
+                    Chat.AddMessage("List is null");
+                    return;
+                }
+                // Send a list of all tasks to all players
+                if (NetworkUser.readOnlyInstancesList.Count > 0)
+                {
+                    //Chat.AddMessage($"Count is {NetworkUser.readOnlyInstancesList.Count}");
+                    // the ?. seems to fix the null errors.
+                    // But why does this one not work when the taskCompleted one does?
+                    //TaskInfo info = new TaskInfo()
+                    //updateTaskClient?.Invoke(taskIDNumbers[0], NetworkUser.readOnlyInstancesList[i]);
+                    for (int j = 0; j < taskIDNumbers.Length; j++)
+                    {
+                        TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length);
+                        updateTaskClient?.Invoke(info, NetworkUser.readOnlyInstancesList[i]);
+                    }
+                }
+                else
+                {
+                    Chat.AddMessage("No network users");
+                }
+            }
+        }
+
+        int[] GetRandomUniqueTasks(int count)
+        {
+            // all possible tasks. Ignore the base task
+            List<int> allTasks = new List<int>(totalNumTasks - 1);
+            int[] results = new int[count];
+
+            for (int i = 0; i < totalNumTasks-1; i++)
+            {
+                // +1 to ignore the base task
+                allTasks.Add(i + 1);
+            }
+
+            if (count > allTasks.Count)
+            {
+                // uh oh
+                Chat.AddMessage($"Not enough tasks({allTasks.Count}). Wanted {count}.");
+            }
+            
+
+            for (int i = 0; i < results.Length; i++)
+            {
+                int r = UnityEngine.Random.Range(0, allTasks.Count);
+                results[i] = allTasks[r];
+                allTasks.RemoveAt(r);
+            }
+
+            return results;
+        }
+
+        string GetTaskDescription(int taskType)
+        {
+            switch((TaskType)taskType)
+            {
+                case TaskType.AirKills:
+                    return AirKills.description;
+
+                case TaskType.DamageMultiple:
+                    return DamageMultipleTargets.description;
+            }
+
+            return "";
+        }
+
+        void NotificationTest()
+        {
             Chat.AddMessage("Trying to make a notification");
             Notification n = gameObject.AddComponent<Notification>();
             n.enabled = false;
@@ -604,7 +698,7 @@ namespace Tasks
 
             // Bottom middle of the notification is the center of the screen
             // Text is left aligned to the box so the text isn't in the center
-            StartCoroutine(MoveNotificationLater(n, new Vector3(1920f/2, 1080f/2, 0)));
+            StartCoroutine(MoveNotificationLater(n, new Vector3(1920f / 2, 1080f / 2, 0)));
 
             //CameraRigController.readOnlyInstancesList[0].hud.objectivePanelController.objectiveTrackerContainer
 
@@ -628,48 +722,7 @@ namespace Tasks
                 //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(0), p2);
             }
             */
-
-            // taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
-            for (int i = 0; i < totalNumPlayers; i++)
-            {
-
-                if(NetworkUser.readOnlyInstancesList is null)
-                {
-                    Chat.AddMessage("List is null");
-                    return;
-                }
-                // Send a list of all tasks to all players
-                if (NetworkUser.readOnlyInstancesList.Count > 0)
-                {
-                    Chat.AddMessage($"Count is {NetworkUser.readOnlyInstancesList.Count}");
-                    // the ?. seems to fix the null errors.
-                    // But why does this one not work when the taskCompleted one does?
-                    //TaskInfo info = new TaskInfo()
-                    //updateTaskClient?.Invoke(taskIDNumbers[0], NetworkUser.readOnlyInstancesList[i]);
-                    for (int j = 0; j < taskIDNumbers.Length; j++)
-                    {
-                        TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length);
-                        updateTaskClient?.Invoke(info, NetworkUser.readOnlyInstancesList[i]);
-                    }
-                }
-                else
-                {
-                    Chat.AddMessage("No network users");
-                }
-            }
         }
-
-        string GetTaskDescription(int taskType)
-        {
-            switch((TaskType)taskType)
-            {
-                case TaskType.AirKills:
-                    return AirKills.description;
-            }
-
-            return "";
-        }
-
         private void TestNotifications()
         {
             for (int i = 0; i < 11; i++)
@@ -736,8 +789,15 @@ namespace Tasks
 
         void TaskCompletion(TaskType taskType, int playerNum)
         {
-            
-            Chat.AddMessage("SERVER: Player "+playerNum + " completed task " + taskType.ToString());
+            if(NetworkServer.active)
+            {
+                Chat.AddMessage("Server is active");
+            }
+            else
+            {
+                Chat.AddMessage("Server is not active");
+            }
+            Chat.AddMessage("SERVER("+(NetworkServer.active?"active":"not active")+"): Player "+playerNum + " completed task " + taskType.ToString());
             // this works at least
             activated = false;
             //GiveRandomItem(netID);
@@ -1019,6 +1079,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills };
+    public enum TaskType { Base, AirKills, DamageMultiple };
 
 }

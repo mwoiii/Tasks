@@ -54,14 +54,21 @@ namespace Tasks
             profile = this.owner.userProfile;
             ownerCached = this.owner;
 
+            // Should I call this here?
+            // The problem is if you start the game with a task achievement completed in your log, it won't track anymore (bc achievements are one-off things)
+            // So if you start the game, will even this part get run?
+            // It doesn't help
+            RemoveAchievement();
+
             // Not sure if this is the right event
             // Other options
+            // These didn't seem to ever trigger for me
             //Run.onServerGameOver
             //Run.onClientGameOverGlobal
             // Need it to remove the achievement if you complete a task
             // and then quit the game before activating it again (bc activating clears it first)
             Run.onRunDestroyGlobal += RunOver;
-
+            
             TasksPlugin.OnActivate += this.Activate;
             TasksPlugin.OnDeactivate += this.Deactivate;
             TasksPlugin.OnResetAll += this.RemoveAchievement;
@@ -182,6 +189,7 @@ namespace Tasks
 
         void RunOver(Run run)
         {
+            //Chat.AddMessage("onRunDestroyGlobal");
             // Just in case
             RemoveAchievement();
         }

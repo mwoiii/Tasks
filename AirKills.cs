@@ -14,8 +14,9 @@ namespace Tasks
         //protected static new string thisClass = "AIR_KILLS_";
         //  /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TEMP_ACHIEVEMENTS_KILL_BEETLE_ACHIEVEMENT_NAME /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TASKS_BASE_TASK_ACHIEVEMENT_NAME
 
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_ID"; // delete me? Pretty sure
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_REWARD_ID"; // Delete me. Maybe not
+        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_ID"; // delete this from XML if there 
+        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_REWARD_ID"; // Delete me from XML too
+        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
         public override string PrerequisiteUnlockableIdentifier { get; } = "";
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_NAME"; // Fine to have in the XML
@@ -42,42 +43,8 @@ namespace Tasks
             base.SetHooks(numPlayers);
             kills = new int[numPlayers];
 
-            //kills = 0;
-
-            //killDelegate killMethod = OnKill;
-            //CmdSetHooks(killMethod);
-
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
-            // if(server)
-            //if(NetworkServer.active)
-            //GlobalEventManager.onCharacterDeathGlobal += RpcOnKill;
-            // if networkServer.notActive return;
-            /*
-            if(ownerCached is null)
-            {
-                Chat.AddMessage("Owner is null");
-            }
-            if (ownerCached.localUser is null)
-            {
-                Chat.AddMessage("localUser is null");
-            }
-            else
-            {
-                Chat.AddMessage($"localUser: {ownerCached.localUser} Id: {ownerCached.localUser.id}");
-            }
-            if (ownerCached.localUser.cachedBody is null)
-            {
-                Chat.AddMessage("body is null");
-            }
-            if (ownerCached.localUser.cachedBody.characterMotor is null)
-            {
-                Chat.AddMessage("Motor is null");
-            }
-            */
-            // They are
-            //Chat.AddMessage($"Owners are still the same: {ownerCached == owner}");
-            
-            //ownerCached.localUser.cachedBody.characterMotor.onHitGround += OnLanding;
+          
             
             for (int i = 0; i < totalNumberPlayers; i++)
             {
@@ -128,6 +95,9 @@ namespace Tasks
                 // seems like this breaks if one of the players is dead
                 current.GetBody().characterMotor.onHitGround -= groundDelegateList[tempInt];
             }
+
+            // if the task is ending, but someone didn't complete it
+            ResetAllKills();
 
             base.Unhook();
         }
