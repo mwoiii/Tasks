@@ -43,6 +43,8 @@ namespace Tasks
         public static event Action OnResetAll;
         public static event Action<int> OnPopup;
 
+        public static TasksPlugin instance;
+
         public IRpcAction<int> taskCompletionClient { get; set; }
         //public IRpcAction<int[]> updateTasksClient { get; set; }
         public IRpcAction<TaskInfo> updateTaskClient { get; set; }
@@ -71,6 +73,11 @@ namespace Tasks
         private void Awake() //Called when loaded by BepInEx.
         {
             Chat.AddMessage("Loaded Task plugin");
+
+            if(instance is null)
+            {
+                instance = this;
+            }
 
             On.RoR2.UserProfile.HasAchievement += (orig, self, param) =>
             {
@@ -104,6 +111,15 @@ namespace Tasks
             // and already accounts for knowing which task was completed
             // so I only need to sub to it once, not once for each different task
             //DamageMultipleTargets.OnCompletion += TaskCompletion;
+
+            // How to make a new Task
+            // Make the class
+            // Add the UnlockablesAPI.AddUnlockable<>(true)
+            // Update the switch in GetTaskDescription (and the description field in the new task class)
+            // Update the TaskType enum (and the field in the new task class)
+
+            UnlockablesAPI.AddUnlockable<DealDamageInTime>(true);
+            UnlockablesAPI.AddUnlockable<StayInAir>(true);
 
             Run.onRunStartGlobal += GameSetup;
 
@@ -253,87 +269,6 @@ namespace Tasks
             }
         }
 
-        void TrySpawnObjectivePanel()
-        {
-
-            // HOLY SHIT THIS ACTUALLY WORKS
-            // Stuff gets added to the list
-            // and when I activate the tp, the tp stuff gets added to the top of the list (above my stuff)
-            // and it auto scales
-            // It gives my stuff a check box which I may or may not want
-
-
-            if(panel is null)
-                panel = FindObjectOfType<ObjectivePanelController>();
-
-            if (panel != null)
-            {
-                oTrackerPrefabCopy = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
-                if (oTrackerPrefabCopy is null)
-                {
-                    Chat.AddMessage("Game object was not instantiated");
-                    return;
-                }
-                oTrackerPrefabCopy.SetActive(true);
-                TMPro.TextMeshProUGUI textMeshLabel = oTrackerPrefabCopy.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
-                if (textMeshLabel != null)
-                {
-                    textMeshLabel.text = "Test Text";
-                    //textMeshLabel.color = Color.blue;
-                    Chat.AddMessage($"Everything worked. oTrackerCopy trans: {oTrackerPrefabCopy.transform.position}");
-                }
-                else
-                {
-                    Chat.AddMessage("text mesh was null");
-                }
-                /// stuff to hook my transform below?
-                //On.RoR2.UI.ChargeIndicatorController
-                //On.RoR2.UI.DifficultyBarController
-
-            }
-            else
-            {
-                Chat.AddMessage("panel was null");
-            }
-        }
-
-        void TryRemoveObjectivePanel()
-        {
-            Chat.AddMessage("Relevant to false");
-            /*
-            [Info   : Unity Log] Pressed F9
-            [Info   : Unity Log] Relevant to false
-            [Error  : Unity Log] NullReferenceException: Object reference not set to an instance of an object
-            Stack trace:
-            Tasks.TasksPlugin.TryRemoveObjectivePanel () (at <46d8c65121e141b08ec2478de3748596>:0)
-            Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
-             */
-            oTrackerPrefabCopy.GetComponent<ObjectivePanelController.ObjectiveTracker>().isRelevant = false;
-        }
-
-        void TryRemoveObjectivePanel2()
-        {
-            Chat.AddMessage("Active to false");
-            // ONLY ONE THAT WORKED
-            oTrackerPrefabCopy.SetActive(false);
-        }
-        void TryRemoveObjectivePanel3()
-        {
-            Chat.AddMessage("Retired");
-            /*
-            [Info   : Unity Log] Pressed F11
-            [Info   : Unity Log] Retired
-            [Error  : Unity Log] NullReferenceException: Object reference not set to an instance of an object
-            Stack trace:
-            Tasks.TasksPlugin.TryRemoveObjectivePanel3 () (at <46d8c65121e141b08ec2478de3748596>:0)
-            Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
-             */
-            // This is a class in a class
-            // It can't be a component.....
-            // it doesn't even extend monobehaviour
-            oTrackerPrefabCopy.GetComponent<ObjectivePanelController.ObjectiveTracker>().Retire();
-        }
-
         void RemoveObjectivePanel(int taskType)
         {
             for (int i = 0; i < tasksUIObjects.Length; i++)
@@ -367,7 +302,7 @@ namespace Tasks
 
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
-            GenerateTasks(2);
+            GenerateTasks(4);
             // How to generate tasks later maybe
             // RoR2.UI.ObjectivePanelController
             // Line 102
@@ -530,24 +465,6 @@ namespace Tasks
             }
         }
 
-
-
-
-        void SetupHooks()
-        {
-            On.RoR2.HealthComponent.SendDamageDealt += (orig, self) =>
-            {
-                // check if it's a player
-                // and check which player
-                orig(self);
-                if (self.attackerTeamIndex == TeamIndex.Player)
-                {
-                    //DealDamageInTime d = (DealDamageInTime)allTasks[1];
-                    //d.OnDamage(self.damageDealt);
-                }
-            };
-        }
-
         void PopulatePlayerDictionary()
         {
             Chat.AddMessage("Trying to fill dictionary");
@@ -679,6 +596,12 @@ namespace Tasks
 
                 case TaskType.DamageMultiple:
                     return DamageMultipleTargets.description;
+
+                case TaskType.DamageInTime:
+                    return DealDamageInTime.description;
+
+                case TaskType.StayInAir:
+                    return StayInAir.description;
             }
 
             return "";
@@ -789,14 +712,6 @@ namespace Tasks
 
         void TaskCompletion(TaskType taskType, int playerNum)
         {
-            if(NetworkServer.active)
-            {
-                Chat.AddMessage("Server is active");
-            }
-            else
-            {
-                Chat.AddMessage("Server is not active");
-            }
             Chat.AddMessage("SERVER("+(NetworkServer.active?"active":"not active")+"): Player "+playerNum + " completed task " + taskType.ToString());
             // this works at least
             activated = false;
@@ -807,19 +722,6 @@ namespace Tasks
             // Why is it backwards from how I wrote it? Weird
             // Does this run on each client or jsut the specific one?
             taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
-        }
-
-        [ClientRpc]
-        void RpcTaskCompletion(TaskType taskType, int playerNum)
-        {
-            Chat.AddMessage("CLIENT: Player " + playerNum + " completed task " + taskType.ToString() + ". Is local? "+ GetPlayerCharacterMaster(playerNum).isLocalPlayer);
-            // if playerNum is me, I completed a task
-            // How do I map a client to a player number?
-            // show popup
-            if(GetPlayerCharacterMaster(playerNum).isLocalPlayer)
-                //OnPopup?.Invoke(taskType);
-
-            taskCompletionClient.Invoke((int)taskType);
         }
 
         public static int GetPlayerNumber(CharacterMaster charMaster)
@@ -841,24 +743,9 @@ namespace Tasks
             return playerCharacterMasters[playerNum];
         }
 
-        /*
-        [Command]
-        void CmdGiveMyselfItem()
-        {
-            // This does not work
-            // Assuming index 1 is player 2 (a client)
-            CharacterMaster.readOnlyInstancesList[1].inventory.GiveItem(ItemIndex.Feather);
-        }
-        */
-
         void GiveRandomItem(int playerNum)
         {
-            // Do I have to do something like this?
-            //playerDict[ID].inventory.CallRpcItemAdded
             playerCharacterMasters[playerNum].inventory.GiveRandomItems(1);
-
-            // What is a reward?
-            // could be an item, gold, xp, hp
         }
 
         void GiveReward(TaskType task, int playerNum)
@@ -1079,6 +966,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir };
 
 }
