@@ -289,16 +289,6 @@ namespace Tasks
             */
         }
 
-        private void TeleporterInteraction_onTeleporterChargedGlobal(TeleporterInteraction obj)
-        {
-            throw new NotImplementedException();
-        }
-
-        private void GlobalEventManager_OnInteractionsGlobal(Interactor arg1, IInteractable arg2, GameObject arg3)
-        {
-            throw new NotImplementedException();
-        }
-
         private void UpdateTasksUI()
         {
             if(panel is null)
