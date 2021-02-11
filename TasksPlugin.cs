@@ -24,7 +24,7 @@ namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency(MiniRpcPlugin.Dependency)]
-    [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI))]
+    [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI), nameof(ItemDropAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -123,6 +123,42 @@ namespace Tasks
 
             Run.onRunStartGlobal += GameSetup;
 
+            TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
+            {
+                // Once the tele event starts
+                // So you interact, then wait a few secs, then this triggers, then the boss spawns
+                Chat.AddMessage("TP event started");
+            };
+            TeleporterInteraction.onTeleporterChargedGlobal += (TeleporterInteraction interaction) =>
+            {
+                // when the charge hits 100%
+                Chat.AddMessage("TP charged to 100%");
+            };
+            TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
+            {
+                // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
+                Chat.AddMessage("TP finished and player chose to leave");
+            };
+            GlobalEventManager.OnInteractionsGlobal += (Interactor interactor, IInteractable interactable, GameObject go) =>
+            {
+                // interactor is the player
+                //interactor.GetComponent<CharacterBody>();
+                
+                // this works
+                // it gets called when you start the tp event and again when you interact with the tp to leave
+                if(go?.GetComponent<TeleporterInteraction>())
+                {
+                    // this might be true for interacting with the end tp to switch to loop mode
+                    Chat.AddMessage("Interacted with TP");
+                }
+            };
+            BossGroup.onBossGroupDefeatedServer += (BossGroup group) =>
+            {
+                // this works. Timer too
+                Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
+            };
+
+            
 
             var miniRpc = MiniRpc.CreateInstance(GUID);
             taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
@@ -156,27 +192,52 @@ namespace Tasks
                 UpdateTasksUI();
             });
 
-            // do this instead?
-            // this would go in awake
-            //On.RoR2.UI.ObjectivePanelController.Update += somehting?
 
-            // option 3
-            /*
-            // Doesn't work at awake
-            GameObject myPrefab = panel.objectiveTrackerPrefab;
-            myPrefab.SetFieldValue("cachedString", "Some text");
-            panel.InvokeMethod("AddObjectiveTracker", panel.objectiveTrackerPrefab);
-            */
-            
+            // Timing
+            // On.Ror2.ClassicStage.Awake
+            // SceneDirector.onPostPopulate
+            // On.HUD.Awake
+            // [Info   : Unity Log] Post Populate scene
+            // [Info: Unity Log] panel was null at awake
+
+            // is this called when a new stage starts? (got this snippet from DirectorAPIInternal
+            // Technically, yes, but it seems to run too soon
+            // On.RoR2.UI.HUD.Awake runs a while after this
+            // And when that runs, panel is null (the UI)
+            On.RoR2.ClassicStageInfo.Awake += (orig, self) =>
+            {
+                Chat.AddMessage("Classic Stage Info Awake: " + self?.GetComponent<SceneInfo>()?.sceneDef?.baseSceneName);
+                orig(self);
+            };
+
+            SceneDirector.onPostPopulateSceneServer += (SceneDirector director) =>
+            {
+                Chat.AddMessage("Post Populate scene");
+                // Are the players spawned? They aren't on screen. So their body and motor probably don't exist
+                // panel is null so the UI isn't active either
+            };
 
             On.RoR2.UI.HUD.Awake += (self, orig) =>
             {
+                // This works now
+                // Gotta grab panel from orig instead of trying to find it
+                // and have to remember to activate the spawned GO
+                // This also gets called at the start of each stage. Still need to test more to see if player bodies are nul or not
                 self(orig);
                 hud = orig;
 
                 // this is null at awake
                 // so none of this runs
                 panel = FindObjectOfType<ObjectivePanelController>();
+                if (panel is null)
+                {
+                    panel = orig.objectivePanelController;
+                    if(panel != null)
+                    {
+                        Chat.AddMessage("Couldn't find panel, but the field was valid");
+                    }
+                }
+
                 if (panel != null)
                 {
                     GameObject go = Instantiate(panel.objectiveTrackerPrefab, orig.objectivePanelController.transform);
@@ -198,6 +259,7 @@ namespace Tasks
                     {
                         Chat.AddMessage("text mesh was null at awake");
                     }
+                    go.SetActive(true);
                     /// stuff to hook my transform below?
                     //On.RoR2.UI.ChargeIndicatorController
                     //On.RoR2.UI.DifficultyBarController
@@ -225,6 +287,16 @@ namespace Tasks
                 hpBar = orig.healthBar;
             };
             */
+        }
+
+        private void TeleporterInteraction_onTeleporterChargedGlobal(TeleporterInteraction obj)
+        {
+            throw new NotImplementedException();
+        }
+
+        private void GlobalEventManager_OnInteractionsGlobal(Interactor arg1, IInteractable arg2, GameObject arg3)
+        {
+            throw new NotImplementedException();
         }
 
         private void UpdateTasksUI()
@@ -870,27 +942,51 @@ namespace Tasks
 
         Reward CreateRandomReward()
         {
-            int r = UnityEngine.Random.Range(0, 1);// Enum.GetNames(typeof(RewardType)).Length);
-            RewardType type = (RewardType)1;
 
-            int item = UnityEngine.Random.Range(0, Enum.GetNames(typeof(ItemIndex)).Length);
+            // ==== Type of Reward
+            WeightedSelection<RewardType> typeSelection = new WeightedSelection<RewardType>();
+
+            typeSelection.AddChoice(RewardType.Item, 2);
+            typeSelection.AddChoice(RewardType.TempItem, 1);
+
+            RewardType type = typeSelection.Evaluate(UnityEngine.Random.value);
 
 
-            // get a list of all tier 1 healing items
-            //List<ItemIndex> healingItemsTier1 = ItemDropAPI.GetDefaultDropList(ItemTier.Tier1, ItemTag.Healing);
-            /*
-                var dropList = Run.instance.availableTier1DropList;
-                //Debug.Log($"Drop list count is {dropList.Count}");
-                var nextItem = Run.instance.treasureRng.RangeInt(0, dropList.Count);
+            // ===== Item
+            WeightedSelection<ItemDropLocation> chestSelection = new WeightedSelection<ItemDropLocation>();
 
-                var transform = PlayerCharacterMasterController.instances[0].master.GetBodyObject().transform;
+            // wiki says weights are small:24, med:4, large:2, specialty:2
+            // specialty are so low just to be more rare, not bc they are too powerful
+            // so I'm fine with increasing their weight
+            chestSelection.AddChoice(ItemDropLocation.SmallChest, 24);
+            chestSelection.AddChoice(ItemDropLocation.MediumChest, 4);
+            chestSelection.AddChoice(ItemDropLocation.UtilityChest, 8);
+            chestSelection.AddChoice(ItemDropLocation.DamageChest, 8);
+            chestSelection.AddChoice(ItemDropLocation.HealingChest, 8);
+            chestSelection.AddChoice(ItemDropLocation.LargeChest, 1); // legendary
+            
 
-                // mushroom is 5
-                // tri tip is 7
-                nextItem = 7;
-                PickupDropletController.CreatePickupDroplet(dropList[nextItem], transform.position, transform.forward * 20f);
-            */
-            Reward reward = new Reward(type, (ItemIndex)item, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
+            // Can I give players use items in the same way as I give them regular items?
+            //chestSelection.AddChoice(ItemDropLocation.EquipmentChest, 20);
+
+            // EntityStates.ScavMonster.FindItem uses random.value in evaluate. It returns a value between 0.0 and 1.0
+            // multiplies this value by the total weight then figures out which selection that corresponds to
+            // Using the example values of 24, 4, 8, 8, 8, 8, 1 = 61
+            // 61 * value = 21(for example) would map to a small chest because 21 < 24
+            // 43 would map to 24 +4 +8 =36 < 43 < 24+4+8+8 =44 so the damage chest
+            ItemDropLocation chest = chestSelection.Evaluate(UnityEngine.Random.value);
+
+            // get a random item from a specific chest
+            // and turn it into an itemIndex (as opposed to a pickupIndex which seems to be depreciated
+            PickupIndex pickupIndex = ItemDropAPI.GetSelection(chest, UnityEngine.Random.value);
+            PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
+            ItemIndex item = def.itemIndex;
+            // ===== End Item
+
+
+            Chat.AddMessage($"Reward created: {item:g} from a {chest:g}");
+
+            Reward reward = new Reward(type, item, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
             return reward;
         }
 
