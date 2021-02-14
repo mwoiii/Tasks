@@ -63,6 +63,10 @@ namespace Tasks
         TaskInfo[] currentTasks;
         GameObject[] tasksUIObjects;
 
+        // Server
+        int[] stageStartTasks;
+        int[] teleStartTasks;
+
         bool activated = false;
 
         HUD hud;
@@ -128,16 +132,24 @@ namespace Tasks
                 // Once the tele event starts
                 // So you interact, then wait a few secs, then this triggers, then the boss spawns
                 Chat.AddMessage("TP event started");
+                // I can add additional tasks here (or maybe in OnInteraction(tele) as that runs first
+                // however, that runs twice. Once to start the tp, again to leave the stage
+
+                
             };
             TeleporterInteraction.onTeleporterChargedGlobal += (TeleporterInteraction interaction) =>
             {
                 // when the charge hits 100%
                 Chat.AddMessage("TP charged to 100%");
+                
             };
             TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
             {
                 // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
                 Chat.AddMessage("TP finished and player chose to leave");
+                // This is where I want to remove temp items
+                RemoveTempItems();
+                StageEnd();
             };
             GlobalEventManager.OnInteractionsGlobal += (Interactor interactor, IInteractable interactable, GameObject go) =>
             {
@@ -170,14 +182,7 @@ namespace Tasks
                 RemoveObjectivePanel(task);
             });
 
-            // Server sends the list of tasks to all clients
-            // How do I send the data? an array of (int)TaskTypes?
-            // array is not serializable
-            // [Error  : Unity Log] NotSupportedException: Type System.Int32[] is not a valid argument type. If this is a type of yours, please implement INetworkSerializable.
-            // try a list instead?
-            // Or just have it work for a single task at a time and have the server call it multiple times
-            // Justs swapping it now so I don't get errors
-            // updateTasksClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int[] tasks) =>
+            
             updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
             {
                 Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
@@ -188,34 +193,8 @@ namespace Tasks
 
                 currentTasks[taskInfo.index] = taskInfo;
 
-
-                UpdateTasksUI();
+                UpdateTasksUI(taskInfo.index);
             });
-
-
-            // Timing
-            // On.Ror2.ClassicStage.Awake
-            // SceneDirector.onPostPopulate
-            // On.HUD.Awake
-            // [Info   : Unity Log] Post Populate scene
-            // [Info: Unity Log] panel was null at awake
-
-            // is this called when a new stage starts? (got this snippet from DirectorAPIInternal
-            // Technically, yes, but it seems to run too soon
-            // On.RoR2.UI.HUD.Awake runs a while after this
-            // And when that runs, panel is null (the UI)
-            On.RoR2.ClassicStageInfo.Awake += (orig, self) =>
-            {
-                Chat.AddMessage("Classic Stage Info Awake: " + self?.GetComponent<SceneInfo>()?.sceneDef?.baseSceneName);
-                orig(self);
-            };
-
-            SceneDirector.onPostPopulateSceneServer += (SceneDirector director) =>
-            {
-                Chat.AddMessage("Post Populate scene");
-                // Are the players spawned? They aren't on screen. So their body and motor probably don't exist
-                // panel is null so the UI isn't active either
-            };
 
             On.RoR2.UI.HUD.Awake += (self, orig) =>
             {
@@ -225,109 +204,30 @@ namespace Tasks
                 // This also gets called at the start of each stage. Still need to test more to see if player bodies are nul or not
                 self(orig);
                 hud = orig;
+                panel = orig.objectivePanelController;
 
-                // this is null at awake
-                // so none of this runs
-                panel = FindObjectOfType<ObjectivePanelController>();
-                if (panel is null)
-                {
-                    panel = orig.objectivePanelController;
-                    if(panel != null)
-                    {
-                        Chat.AddMessage("Couldn't find panel, but the field was valid");
-                    }
-                }
+                int numberOfStageTasks = 4; // I know these numbers are going to be equal, so I can just do that here instead of waiting for GenerateTasks to run
+                // array = new array(numberOfStageTasks)
+                tasksUIObjects = new GameObject[numberOfStageTasks];
 
-                if (panel != null)
-                {
-                    GameObject go = Instantiate(panel.objectiveTrackerPrefab, orig.objectivePanelController.transform);
-                    oTrackerPrefabCopy = go;
-                    if (go is null)
-                    {
-                        Chat.AddMessage("Game object was not instantiated");
-                        return;
-                    }
-
-                    TMPro.TextMeshProUGUI textMeshLabel = go.transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
-                    if(textMeshLabel != null)
-                    {
-                        textMeshLabel.text = "Test Text";
-                        textMeshLabel.color = Color.blue;
-                        Chat.AddMessage($"Everything worked. GO trans: {go.transform.position}");
-                    }
-                    else
-                    {
-                        Chat.AddMessage("text mesh was null at awake");
-                    }
-                    go.SetActive(true);
-                    /// stuff to hook my transform below?
-                    //On.RoR2.UI.ChargeIndicatorController
-                    //On.RoR2.UI.DifficultyBarController
-
-                }
-                else
-                {
-                    Chat.AddMessage("panel was null at awake");
-                }
-
-                // Create my UI
-                // parent it to the right position. I wonder if that will make it move as the game objectives container scales? Or will I have to do that?
-                // do myRect.transform instead of just transform
-                //transform.SetParent(orig.objectivePanelController.transform, false);
+                if(NetworkServer.active)
+                    GenerateTasks(numberOfStageTasks);
                 
-            };
-            // From corpseBloom mod example. But there is no Start.....
-            //Add reserveUI to HealthBar
-            /*
-            On.RoR2.UI.HUD.Start += (self, orig) =>
-            {
-                self(orig);
-                initializeReserveUI();
-                reserveRect.transform.SetParent(orig.healthBar.transform, false);
-                hpBar = orig.healthBar;
-            };
-            */
+            };   
         }
 
-        private void UpdateTasksUI()
+        void UpdateTasksUI(int taskIndex, string text = "")
         {
-            if(panel is null)
-                panel = FindObjectOfType<ObjectivePanelController>();
-
-            if(tasksUIObjects is null || tasksUIObjects.Length != currentTasks.Length)
+            if (tasksUIObjects[taskIndex] is null)
             {
-                tasksUIObjects = new GameObject[currentTasks.Length];
+                tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
             }
+            tasksUIObjects[taskIndex].SetActive(true);
 
-            if (panel != null)
+            TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[taskIndex].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+            if (textMeshLabel != null)
             {
-                for (int i = 0; i < currentTasks.Length; i++)
-                {
-                    if (currentTasks[i] is null)
-                        break;
-
-                    // Check if it already exists before making a new one
-                    if (tasksUIObjects[i] is null)
-                    {
-                        Chat.AddMessage($"Creating UI object for the first time. i: {i}");
-                        tasksUIObjects[i] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
-                    }
-                    if (tasksUIObjects[i] is null)
-                    {
-                        Chat.AddMessage("Task UI object was not instantiated"); 
-                        return;
-                    }
-                    tasksUIObjects[i].SetActive(true);
-                    TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[i].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
-                    if (textMeshLabel != null)
-                    {
-                        textMeshLabel.text = currentTasks[i].description;
-                    }
-                }
-            }
-            else
-            {
-                Chat.AddMessage("Panel is null");
+                textMeshLabel.text = (text == "") ? currentTasks[taskIndex].description : text;
             }
         }
 
@@ -337,8 +237,18 @@ namespace Tasks
             {
                 if(currentTasks[i].taskType == taskType)
                 {
-                    // Do something to show it was completed other than just hiding it
+                    if(tasksUIObjects[i] is null)
+                    {
+                        Chat.AddMessage($"UI Object {i} was null");
+                        break;
+                    }
+
+                    // TODO: Do something to show it was completed other than just hiding it
                     tasksUIObjects[i].SetActive(false);
+                    // should I just destroy them? Doesn't seem to help
+                    // They might get removed twice. Once if you complete them and then again at the end
+                    // destroying them doesn't make them null so it's hard to check for
+                    //Destroy(tasksUIObjects[i]);
                 }
             }
         }
@@ -364,7 +274,10 @@ namespace Tasks
 
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
-            GenerateTasks(4);
+
+            // Moved to UI.Awake bc it's called every stage
+            //GenerateTasks(4);
+
             // How to generate tasks later maybe
             // RoR2.UI.ObjectivePanelController
             // Line 102
@@ -576,11 +489,24 @@ namespace Tasks
             StartTasks(numTasks);
         }
 
-        void StartTasks(int numTasks)
+        void StartTasks(int numTasks, bool teleTasks = false)
         {
             int[] taskIDNumbers = GetRandomUniqueTasks(numTasks);
+
+            if(teleTasks)
+            {
+                teleStartTasks = taskIDNumbers;
+            }
+            else
+            {
+                stageStartTasks = taskIDNumbers;
+            }
+
             for (int i = 0; i < taskIDNumbers.Length; i++)
             {
+                // rewards[TaskType.DamageInTime]
+                // array is as large as TaskType enum (-1)
+                // but not necessarily full. Maybe only tasks 3, 5, 8 are active
                 rewards[taskIDNumbers[i]] = CreateRandomReward();
 
                 // These 2 lines for debugging
@@ -618,6 +544,31 @@ namespace Tasks
                     Chat.AddMessage("No network users");
                 }
             }
+        }
+
+        void EndAllTasks()
+        {
+            if (stageStartTasks != null)
+            {
+                for (int i = 0; i < stageStartTasks.Length; i++)
+                {
+                    OnDeactivate?.Invoke(stageStartTasks[i]);
+                    RemoveObjectivePanel(stageStartTasks[i]);
+                }
+            }
+            if (teleStartTasks != null)
+            {
+                for (int i = 0; i < teleStartTasks.Length; i++)
+                {
+                    OnDeactivate?.Invoke(teleStartTasks[i]);
+                    RemoveObjectivePanel(teleStartTasks[i]);
+                }
+            }
+        }
+
+        void StageEnd()
+        {
+            EndAllTasks();
         }
 
         int[] GetRandomUniqueTasks(int count)
