@@ -167,7 +167,7 @@ namespace Tasks
 
         public void Deactivate(int id)
         {
-            if(id == (int)type)
+            if(id == (int)type || id < 0)
             {
                 Unhook();
             }

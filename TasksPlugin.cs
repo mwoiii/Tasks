@@ -46,6 +46,7 @@ namespace Tasks
         public static TasksPlugin instance;
 
         public IRpcAction<int> taskCompletionClient { get; set; }
+        public IRpcAction<int> taskEndedClient { get; set; }
         //public IRpcAction<int[]> updateTasksClient { get; set; }
         public IRpcAction<TaskInfo> updateTaskClient { get; set; }
 
@@ -127,6 +128,11 @@ namespace Tasks
 
             Run.onRunStartGlobal += GameSetup;
 
+            // Client only trigger
+            // started, 100%, leave
+            // server does those plus does interact, boss, interact
+            // So the client tries to run RemoveTempItems and StageEnd
+
             TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
             {
                 // Once the tele event starts
@@ -182,7 +188,13 @@ namespace Tasks
                 RemoveObjectivePanel(task);
             });
 
-            
+            taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            {
+                Chat.AddMessage($"Task {task} ended. Removing UI");
+                // task ended
+                RemoveObjectivePanel(task);
+            });
+
             updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
             {
                 Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
@@ -195,6 +207,7 @@ namespace Tasks
 
                 UpdateTasksUI(taskInfo.index);
             });
+
 
             On.RoR2.UI.HUD.Awake += (self, orig) =>
             {
@@ -275,6 +288,12 @@ namespace Tasks
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
+            // -1 forces it to match for deactivation purposes
+            // if(id == myId || id < 0)
+            // Means I don't have to iterate over every task id and check if it matches n*n times
+            OnDeactivate?.Invoke(-1);
+
+
             // Moved to UI.Awake bc it's called every stage
             //GenerateTasks(4);
 
@@ -293,151 +312,7 @@ namespace Tasks
 
         public void Update()
         {
-            if(Input.GetKeyDown(KeyCode.F2))
-            {
-                // activate
-                Chat.AddMessage("Pressed F2");
-                if(OnActivate != null && !activated)
-                {
-                    Chat.AddMessage("Trying to send Activate");
-                    // this should probably only work on the server
-                    OnActivate(1, totalNumPlayers);
-                    activated = true;
-                }
-            }
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                Chat.AddMessage("Pressed F3");
-
-                if (OnDeactivate != null)
-                {
-                    Chat.AddMessage("Trying to send Deactivate. Someone else completed it.");
-
-                    OnDeactivate(1);
-                    activated = false;
-                }
-            }
-            if (Input.GetKeyDown(KeyCode.F4))
-            {
-                //OnPopup?.Invoke();
-                Chat.AddMessage("Trying to give both players an item");
-                // This works!
-                // Can't be called on the client
-                // Host has a NetworServer.Active be true
-                CharacterMaster.readOnlyInstancesList[0]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
-                CharacterMaster.readOnlyInstancesList[1]?.inventory?.GiveItem(ItemIndex.ArmorPlate);
-                //CmdGiveMyselfItem();
-                //CharacterMaster.readOnlyInstancesList[0]?.inventory?.RemoveItem(ItemIndex.ArmorPlate);
-
-            }
-            if (Input.GetKeyDown(KeyCode.F5))
-            {
-                Chat.AddMessage("Pressing F5");
-
-                // I think I can just omit inventory....
-                string netID = CharacterMaster.readOnlyInstancesList[0].netId.ToString();
-                if (!netID.IsNullOrWhiteSpace())
-                    Chat.AddMessage("Player 0 net ID: " + netID);
-                // string netID = CharacterMaster.readOnlyInstancesList[0].inventory.netId.ToString();
-                // [Info   : Unity Log] Player 0 net ID: 6
-                // Net id was the same as what was recorded in the achievements in the same game
-                // 6 both times I launched the game. Is it always 6 for player 1? Is it 6 for everyone or is it 7, 8, 9?
-                /*
-                string myName = CharacterMaster.readOnlyInstancesList[0].GetComponent<UserProfile>().name; // this is null. So no UserProfile attached
-                if (!myName.IsNullOrWhiteSpace())
-                    Chat.AddMessage("My name is " + myName);
-                */
-            }
-            if(Input.GetKeyDown(KeyCode.F6))
-            {
-                Chat.AddMessage("Pressing F6");
-                RemoveTempItems();
-                /*
-                for (int i = 0; i < BodyCatalog.bodyCount; i++)
-                {
-                    Chat.AddMessage(BodyCatalog.GetBodyName(i));
-                }
-                */
-            }
-            if (Input.GetKeyDown(KeyCode.F1))
-            {
-                Chat.AddMessage("Pressed F1");
-                // who is in the list?
-                for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
-                {
-                    Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
-                    Chat.AddMessage($"Player: {CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController} PlayerID: {CharacterMaster.readOnlyInstancesList[i].playerControllerId}");
-                }
-
-                /*
-                // Chat.AddMessage($"Player: {CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController} PlayerID: {CharacterMaster.readOnlyInstancesList[i].playerControllerId} Stats: {CharacterMaster.readOnlyInstancesList[i].playerStatsComponent}");
-                // Why is playerControllerId -1 for all of them?
-                [Info   : Unity Log] Pressed F7
-                [Info   : Unity Log] Player: CommandoMaster(Clone) (RoR2.PlayerCharacterMasterController) PlayerID: -1 Stats: CommandoMaster(Clone) (RoR2.Stats.PlayerStatsComponent)
-                [Info   : Unity Log] Player:  PlayerID: -1 Stats: 
-
-                // Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
-                // How am I not the local player
-                // And I was playing artificier...
-                // This doesn't find players, just everything in the scene
-                [Info: Unity Log] Pressed F7
-                [Info: Unity Log] Name: CommandoMaster(Clone) NetID: 6 LocalPlayer: False
-                [Info: Unity Log] Name: BeetleMaster(Clone) NetID: 58 LocalPlayer: False
-                [Info: Unity Log] Name: GolemMaster(Clone) NetID: 60 LocalPlayer: False
-                [Info: Unity Log] Name: WispMaster(Clone) NetID: 62 LocalPlayer: False
-                [Info: Unity Log] Pressed F7
-                [Info: Unity Log] Name: CommandoMaster(Clone) NetID: 6 LocalPlayer: False
-                [Info: Unity Log] Name: BeetleMaster(Clone) NetID: 58 LocalPlayer: False
-                [Info: Unity Log] Name: LemurianMaster(Clone) NetID: 91 LocalPlayer: False
-                [Info: Unity Log] Name: BeetleMaster(Clone) NetID: 102 LocalPlayer: False
-                */
-            }
-            if(Input.GetKeyDown(KeyCode.F7))
-            {
-                Chat.AddMessage("Pressed F7");
-                //TrySpawnObjectivePanel();
-                
-            }
-            if(Input.GetKeyDown(KeyCode.F8))
-            {
-                Chat.AddMessage("Pressed F8");
-                RemoveObjectivePanel((int)TaskType.AirKills);
-
-                // DOES NOT WORK
-                /*
-                [Info   : Unity Log] Pressed F8
-                [Error  : Unity Log] Exception: Could not find FieldInfo on UnityEngine.GameObject with the name cachedString
-                Stack trace:
-                R2API.Utils.Reflection+<>c__DisplayClass18_0.<GetFieldCached>b__0 (System.ValueTuple`2[T1,T2] x) (at <9e56c0ad50a94360869661ef606f8608>:0)
-                R2API.Utils.Reflection.GetOrAddOnNull[TKey,TValue] (System.Collections.Concurrent.ConcurrentDictionary`2[TKey,TValue] dict, TKey key, System.Func`2[T,TResult] factory) (at <9e56c0ad50a94360869661ef606f8608>:0)
-                R2API.Utils.Reflection.GetFieldCached (System.Type T, System.String name) (at <9e56c0ad50a94360869661ef606f8608>:0)
-                R2API.Utils.Reflection.SetFieldValue[TValue] (System.Object instance, System.String fieldName, TValue value) (at <9e56c0ad50a94360869661ef606f8608>:0)
-                Tasks.TasksPlugin.Update () (at <46d8c65121e141b08ec2478de3748596>:0)
-                 
-                GameObject myPrefab = panel.objectiveTrackerPrefab;
-                // will this work before I instantiate it?
-                // also only works if isDirty is true. I don't know if it will be
-                myPrefab.SetFieldValue("cachedString", "Some text");
-                panel.InvokeMethod("AddObjectiveTracker", panel.objectiveTrackerPrefab);
-                */
-            }
-            if(Input.GetKeyDown(KeyCode.F9))
-            {
-                Chat.AddMessage("Pressed F9");
-                // Nope
-                //TryRemoveObjectivePanel();
-            }
-            if (Input.GetKeyDown(KeyCode.F10))
-            {
-                Chat.AddMessage("Pressed F10");
-                //TryRemoveObjectivePanel2();
-            }
-            if (Input.GetKeyDown(KeyCode.F11))
-            {
-                Chat.AddMessage("Pressed F11");
-                // Nope
-                //TryRemoveObjectivePanel3();
-            }
+            //if(Input.GetKeyDown(KeyCode.F2))
         }
 
         void PopulatePlayerDictionary()
@@ -735,6 +610,7 @@ namespace Tasks
             // Why is it backwards from how I wrote it? Weird
             // Does this run on each client or jsut the specific one?
             taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
+            taskEndedClient.Invoke((int)taskType); // hope this sends to everyone
         }
 
         public static int GetPlayerNumber(CharacterMaster charMaster)
@@ -763,17 +639,47 @@ namespace Tasks
 
         void GiveReward(TaskType task, int playerNum)
         {
+            Chat.AddMessage($"Giving a reward. Notif Queue size: {NotificationQueue.readOnlyInstancesList.Count}");
             if(rewards[(int)task].type == RewardType.Item)
             {
-                Chat.AddMessage("Giving item: " + rewards[(int)task].item.ToString("g"));
-                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
-                //playerDict[ID].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
+                // I'm not sure what readOnlyInstanceList[0] is
+                // Are there more than one? GenericPickupController loops over all of them and runs OnPickup on all of them
+                NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+               
+                // show text in chat
+                PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
+                Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, 1);
+
+                // This might not be any different...
+                Chat.AddMessage(new Chat.PlayerPickupChatMessage
+                {
+                    subjectAsCharacterBody = GetPlayerCharacterMaster(playerNum).GetBody(),
+                    baseToken = "PLAYER_PICKUP",
+                    pickupToken = pickDef.nameToken,
+                    pickupColor = pickDef.baseColor,
+                    pickupQuantity = 1
+                }.ConstructChatString() + " This might play on each client like it's supposed to");
+                
             }
             else if(rewards[(int)task].type == RewardType.TempItem)
             {
-                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
+                NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+
+                PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
+                Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, Convert.ToUInt32(rewards[(int)task].numItems));
+
+                Chat.AddMessage(new Chat.PlayerPickupChatMessage
+                {
+                    subjectAsCharacterBody = GetPlayerCharacterMaster(playerNum).GetBody(),
+                    baseToken = "PLAYER_PICKUP",
+                    pickupToken = pickDef.nameToken,
+                    pickupColor = pickDef.baseColor,
+                    pickupQuantity = Convert.ToUInt32(rewards[(int)task].numItems)
+                }.ConstructChatString() + " This might play on each client like it's supposed to");
+
                 // remove these items later
-                //Stage.onServerStageComplete += RemoveTempItems;
                 // Record what items to remove
                 RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
             }
@@ -786,46 +692,20 @@ namespace Tasks
             }
         }
 
-        void RecordTempItems(int playerNum, ItemIndex item, int count)
+        void RecordTempItems(int playerNum, PickupIndex item, int count)
         {
-            // ID is 6 for player 1
-            // Don't know what the ID for player 2 is. Will it be 7?
-            // So this old version is looking for list[6] which is out of range
-            //TempItemLists[(int)ID].Add(new TempItem(item, count));
-            // So maybe an array of lists was bad
-            // Maybe a dict of lists would be better. Then I could use the ID
-
-            //int playerNum = -1;
-            // try to figure out which player ID matches which player in the list
-            // This might be an even stupider way to do it
-            /*
-            for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
-            {
-                if(playerDict[ID] == CharacterMaster.readOnlyInstancesList[i])
-                {
-                    playerNum = i;
-                }
-            }
-            */
+            
             if(playerNum < 0)
             {
                 Chat.AddMessage("Didn't find a match. Couldn't record items");
                 return;
             }
-            // Adding glasses x5 and adding glasses x3 will just make 2 entries in the list
-            // instead of having one entry for glasses x8
-            // probably not a big deal to make it work that way
+
             TempItemLists[playerNum].Add(new TempItem(item, count));
         }
 
         void RemoveTempItems()
         {
-            // Something here goes out of range
-            Chat.AddMessage($"Character list: {CharacterMaster.readOnlyInstancesList.Count} playerCharList: {playerCharacterMasters.Count} TempItemLists array: {TempItemLists.Length} Expect 1 for all");
-            // this list counts mobs as well as players
-            // players have
-            //CharacterMaster.readOnlyInstancesList[0].playerCharacterMasterController
-            // but mobs don't
             for (int i = 0; i < playerCharacterMasters.Count; i++)
             {
 
@@ -843,42 +723,11 @@ namespace Tasks
                         
                     TempItem temp = list[0];
                     Chat.AddMessage($"Removing {temp.count} {temp.item:g}");
-                    // will this take items from the right players? I dunno
-                    // Will it break what's in my dict? dunno
-                    // are the CharacterMasters in the dict copies or references?
-                    // appears to work for 1 player
-
-                    // using my own playerCharacter cache
-                    // CharacterMaster.readOnlyInstanceList counts mobs too
-                    playerCharacterMasters[i].inventory.RemoveItem(temp.item, temp.count);
-                    // player dict needs 6 instead of 0
-                    //playerDict[(uint)i].inventory.RemoveItem(temp.item, temp.count);
+                    
+                    playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, temp.count);
                     list.RemoveAt(0);
                 }
-                Chat.AddMessage($"Num times loop ran: {count}");
             }
-            /*
-            Running with no temp items
-            [Info: Unity Log] Pressing F6
-            [Info   : Unity Log] Character list: 5 TempItemLists array: 1 Expect 1 for both
-            [Info: Unity Log] List count: 0
-            [Info: Unity Log] Num times loop ran: 0
-            [Error: Unity Log] IndexOutOfRangeException: Index was outside the bounds of the array.
-            Stack trace:
-            Tasks.TasksPlugin.RemoveTempItems()(at<a4c4adfe592245d58f7cf0d692b5c5bd>:0)
-            Tasks.TasksPlugin.Update()(at<a4c4adfe592245d58f7cf0d692b5c5bd>:0)
-            
-            //running with temp items
-            [Info   : Unity Log] Pressing F6
-            [Info   : Unity Log] Character list: 4 TempItemLists array: 1 Expect 1 for both
-            [Info   : Unity Log] List count: 1
-            [Info   : Unity Log] Removing 5 WardOnLevel
-            [Info   : Unity Log] Num times loop ran: 1
-            [Error  : Unity Log] IndexOutOfRangeException: Index was outside the bounds of the array.
-            Stack trace:
-            Tasks.TasksPlugin.RemoveTempItems () (at <a4c4adfe592245d58f7cf0d692b5c5bd>:0)
-            Tasks.TasksPlugin.Update () (at <a4c4adfe592245d58f7cf0d692b5c5bd>:0)
-            */
         }
 
         Reward CreateRandomReward()
@@ -920,20 +769,20 @@ namespace Tasks
             // get a random item from a specific chest
             // and turn it into an itemIndex (as opposed to a pickupIndex which seems to be depreciated
             PickupIndex pickupIndex = ItemDropAPI.GetSelection(chest, UnityEngine.Random.value);
-            PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
-            ItemIndex item = def.itemIndex;
+            //PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
+            //ItemIndex item = def.itemIndex;
             // ===== End Item
 
 
-            Chat.AddMessage($"Reward created: {item:g} from a {chest:g}");
+            Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
 
-            Reward reward = new Reward(type, item, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
+            Reward reward = new Reward(type, pickupIndex, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
             return reward;
         }
 
         public struct Reward
         {
-            public Reward(RewardType _type, ItemIndex _item, int _numItems, bool _temporary, int _gold, int _xp)
+            public Reward(RewardType _type, PickupIndex _item, int _numItems, bool _temporary, int _gold, int _xp)
             {
                 type = _type;
                 item = _item;
@@ -944,23 +793,23 @@ namespace Tasks
             }
 
             public RewardType type;
-            public ItemIndex item;
+            public PickupIndex item;
             public int numItems;
             public bool temporary;
             public int gold;
             public int xp;
 
-            public override string ToString() => $"{type.ToString("g")}, {item.ToString("g")}";
+            public override string ToString() => $"{type:g}, {item:g}";
         }
 
         public struct TempItem
         {
-            public TempItem(ItemIndex _item, int _count)
+            public TempItem(PickupIndex _item, int _count)
             {
                 item = _item;
                 count = _count;
             }
-            public ItemIndex item;
+            public PickupIndex item;
             public int count;
         }
 
