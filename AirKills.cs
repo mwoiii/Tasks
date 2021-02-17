@@ -141,6 +141,8 @@ namespace Tasks
 
         void ResetAllKills()
         {
+            if (kills is null)
+                return;
             for (int i = 0; i < kills.Length; i++)
             {
                 kills[i] = 0;

@@ -120,11 +120,14 @@ namespace Tasks
             // How to make a new Task
             // Make the class
             // Add the UnlockablesAPI.AddUnlockable<>(true)
+            // Update the TaskType enum (and the field in the new task class
             // Update the switch in GetTaskDescription (and the description field in the new task class)
-            // Update the TaskType enum (and the field in the new task class)
+            // change the achievement IDs
 
             UnlockablesAPI.AddUnlockable<DealDamageInTime>(true);
             UnlockablesAPI.AddUnlockable<StayInAir>(true);
+            UnlockablesAPI.AddUnlockable<BiggestHit>(true);
+            UnlockablesAPI.AddUnlockable<MostDistance>(true);
 
             Run.onRunStartGlobal += GameSetup;
 
@@ -153,9 +156,10 @@ namespace Tasks
             {
                 // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
                 Chat.AddMessage("TP finished and player chose to leave");
-                // This is where I want to remove temp items
-                RemoveTempItems();
-                StageEnd();
+                if (NetworkServer.active)
+                {
+                    StageEnd();
+                }
             };
             GlobalEventManager.OnInteractionsGlobal += (Interactor interactor, IInteractable interactable, GameObject go) =>
             {
@@ -215,12 +219,12 @@ namespace Tasks
                 // Gotta grab panel from orig instead of trying to find it
                 // and have to remember to activate the spawned GO
                 // This also gets called at the start of each stage. Still need to test more to see if player bodies are nul or not
+                // GenerateTasks waits 3 seconds and that seems to do it
                 self(orig);
                 hud = orig;
                 panel = orig.objectivePanelController;
 
-                int numberOfStageTasks = 4; // I know these numbers are going to be equal, so I can just do that here instead of waiting for GenerateTasks to run
-                // array = new array(numberOfStageTasks)
+                int numberOfStageTasks = 6; 
                 tasksUIObjects = new GameObject[numberOfStageTasks];
 
                 if(NetworkServer.active)
@@ -360,7 +364,7 @@ namespace Tasks
         IEnumerator StartTasksWorkaround(int numTasks)
         {
             // If I start tasks right at the beginning, the player's body is null
-            yield return new WaitForSeconds(3);
+            yield return new WaitForSeconds(3); // 3 sec is arbitrary, but seems to work. Could fail if stages later in the run take longer to load maybe
             StartTasks(numTasks);
         }
 
@@ -443,6 +447,10 @@ namespace Tasks
 
         void StageEnd()
         {
+            // Do this before ending all tasks
+            // some tasks are only finished when the stage ends (deal the most damage, etc)
+            // So they need to give their reward after temp items are removed in case they give temp items
+            RemoveTempItems();
             EndAllTasks();
         }
 
@@ -490,6 +498,12 @@ namespace Tasks
 
                 case TaskType.StayInAir:
                     return StayInAir.description;
+
+                case TaskType.BiggestHit:
+                    return BiggestHit.description;
+
+                case TaskType.MostDistance:
+                    return MostDistance.description;
             }
 
             return "";
@@ -652,6 +666,7 @@ namespace Tasks
                 Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, 1);
 
                 // This might not be any different...
+                /*
                 Chat.AddMessage(new Chat.PlayerPickupChatMessage
                 {
                     subjectAsCharacterBody = GetPlayerCharacterMaster(playerNum).GetBody(),
@@ -660,7 +675,7 @@ namespace Tasks
                     pickupColor = pickDef.baseColor,
                     pickupQuantity = 1
                 }.ConstructChatString() + " This might play on each client like it's supposed to");
-                
+                */
             }
             else if(rewards[(int)task].type == RewardType.TempItem)
             {
@@ -669,7 +684,7 @@ namespace Tasks
 
                 PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
                 Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, Convert.ToUInt32(rewards[(int)task].numItems));
-
+                /*
                 Chat.AddMessage(new Chat.PlayerPickupChatMessage
                 {
                     subjectAsCharacterBody = GetPlayerCharacterMaster(playerNum).GetBody(),
@@ -678,7 +693,7 @@ namespace Tasks
                     pickupColor = pickDef.baseColor,
                     pickupQuantity = Convert.ToUInt32(rewards[(int)task].numItems)
                 }.ConstructChatString() + " This might play on each client like it's supposed to");
-
+                */
                 // remove these items later
                 // Record what items to remove
                 RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
@@ -852,6 +867,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance };
 
 }

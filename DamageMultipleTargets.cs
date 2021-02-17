@@ -99,6 +99,8 @@ namespace Tasks
 
         void ResetKills()
         {
+            if (targets is null)
+                return;
             for (int i = 0; i < targets.Length; i++)
             {
                 targets[i].Clear();

@@ -87,6 +87,8 @@ namespace Tasks
 
         void Reset()
         {
+            if (timeInAir is null)
+                return;
             for (int i = 0; i < timeInAir.Length; i++)
             {
                 timeInAir[i] = 0;

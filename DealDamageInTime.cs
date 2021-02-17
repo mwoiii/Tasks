@@ -92,6 +92,8 @@ namespace Tasks
 
         void Reset()
         {
+            if (currentDamage is null)
+                return;
             for (int i = 0; i < currentDamage.Length; i++)
             {
                 currentDamage[i] = 0;
