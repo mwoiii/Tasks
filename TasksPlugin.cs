@@ -59,6 +59,7 @@ namespace Tasks
         int totalNumTasks;
         Reward[] rewards;
         List<TempItem>[] TempItemLists;
+        EquipmentIndex[] preonEventEqCache; // where your equipment is stored when the preon event starts and swaps it for a preon
 
         // Client
         TaskInfo[] currentTasks;
@@ -128,6 +129,8 @@ namespace Tasks
             UnlockablesAPI.AddUnlockable<StayInAir>(true);
             UnlockablesAPI.AddUnlockable<BiggestHit>(true);
             UnlockablesAPI.AddUnlockable<MostDistance>(true);
+            UnlockablesAPI.AddUnlockable<PreonEvent>(true);
+
 
             Run.onRunStartGlobal += GameSetup;
 
@@ -504,6 +507,9 @@ namespace Tasks
 
                 case TaskType.MostDistance:
                     return MostDistance.description;
+
+                case TaskType.PreonEvent:
+                    return PreonEvent.description;
             }
 
             return "";
@@ -795,6 +801,29 @@ namespace Tasks
             return reward;
         }
 
+        public static void StartPreonEvent()
+        {
+            instance.preonEventEqCache = new EquipmentIndex[playerCharacterMasters.Count];
+            for (int i = 0; i < playerCharacterMasters.Count; i++)
+            {
+                instance.preonEventEqCache[i] = playerCharacterMasters[i].inventory.currentEquipmentIndex;
+                playerCharacterMasters[i].inventory.SetEquipmentIndex(EquipmentIndex.BFG);
+                //playerCharacterMasters[i].inventory.GiveItem(ItemIndex.AutoCastEquipment); // annoying while testing stuff
+                playerCharacterMasters[i].inventory.GiveItem(ItemIndex.EquipmentMagazine, 5);
+            }
+
+        }
+
+        public static void EndPreonEvent()
+        {
+            for (int i = 0; i < playerCharacterMasters.Count; i++)
+            {
+                playerCharacterMasters[i].inventory.SetEquipmentIndex(instance.preonEventEqCache[i]);
+                //playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.AutoCastEquipment);
+                playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.EquipmentMagazine, 5);
+            }
+        }
+
         public struct Reward
         {
             public Reward(RewardType _type, PickupIndex _item, int _numItems, bool _temporary, int _gold, int _xp)
@@ -867,6 +896,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent };
 
 }
