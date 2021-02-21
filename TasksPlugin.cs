@@ -130,6 +130,11 @@ namespace Tasks
             UnlockablesAPI.AddUnlockable<BiggestHit>(true);
             UnlockablesAPI.AddUnlockable<MostDistance>(true);
             UnlockablesAPI.AddUnlockable<PreonEvent>(true);
+            UnlockablesAPI.AddUnlockable<FarthestAway>(true);
+            UnlockablesAPI.AddUnlockable<FailShrine>(true);
+            UnlockablesAPI.AddUnlockable<OpenChests>(true);
+            UnlockablesAPI.AddUnlockable<StartTeleporter>(true);
+            UnlockablesAPI.AddUnlockable<UsePrinters>(true);
 
 
             Run.onRunStartGlobal += GameSetup;
@@ -168,10 +173,54 @@ namespace Tasks
             {
                 // interactor is the player
                 //interactor.GetComponent<CharacterBody>();
-                
+                string interactableType = interactable.GetType().ToString();
+                if(go?.GetComponent<ShopTerminalBehavior>())
+                {
+                    // doesn't work with MultiShopController
+                    // maybe ShopTerminalBehaviour works?
+                    // it works, but it gives false positives
+                    // It triggers if you use a 3D printer
+                    // [Info   : Unity Log] Interacted with multishop. InterType: RoR2.PurchaseInteraction
+                    // might need to go gameObject.name.Contains("Printer") (but not sure what the text would be
+                    Chat.AddMessage("Interacted with multishop. InterType: "+interactableType + " name: "+go.name);
+                    // MultiShopTerminal(Clone)
+                    // DuplicatorLarge(Clone) --- Duplicator(Clone)
+                }
+                if (go?.GetComponent<ChestBehavior>())
+                {
+                    // works
+                    // [Info   : Unity Log] Interacted with chest. InterType: RoR2.PurchaseInteraction
+                    // damage chest, eq chest, small chest all worked
+                    Chat.AddMessage("Interacted with chest. InterType: " + interactableType + " name: " + go.name);
+                    // CategoryChestUtility(Clone) --- CategoryChestDamage(Clone)
+                    // Chest1
+                    // EquipmentBarrel(Clone)
+                }
+                if (go?.GetComponent<BarrelInteraction>())
+                {
+                    // works
+                    // [Info   : Unity Log] Interacted with a barrel. InterType: RoR2.BarrelInteraction
+                    Chat.AddMessage("Interacted with a barrel. InterType: " + interactableType + " name: " + go.name);
+                    // Barrel1(Clone)
+                }
+                if (go?.GetComponent<PrintController>())
+                {
+                    Chat.AddMessage("Interacted with a 3D printer. InterType: " + interactableType + " name: " + go.name);
+                }
+                // when you use a 3D printer or eq drone i think or pool prob
+                // PurchaseInteraction.onItemSpentOnPurchase += method
+                // purchaseInteraction.gameObject.name.Contains("Duplicator")
+
+                /*
+                // maybe this works, but can't put it inside this method. This is how the vanilla achieve works
+                EntityStates.TimedChest.Opening.onOpened += () =>
+                {
+                    Chat.AddMessage("Opened a timed chest");
+                };
+                */
                 // this works
                 // it gets called when you start the tp event and again when you interact with the tp to leave
-                if(go?.GetComponent<TeleporterInteraction>())
+                if (go?.GetComponent<TeleporterInteraction>())
                 {
                     // this might be true for interacting with the end tp to switch to loop mode
                     Chat.AddMessage("Interacted with TP");
@@ -227,7 +276,7 @@ namespace Tasks
                 hud = orig;
                 panel = orig.objectivePanelController;
 
-                int numberOfStageTasks = 6; 
+                int numberOfStageTasks = 9; 
                 tasksUIObjects = new GameObject[numberOfStageTasks];
 
                 if(NetworkServer.active)
@@ -510,6 +559,21 @@ namespace Tasks
 
                 case TaskType.PreonEvent:
                     return PreonEvent.description;
+
+                case TaskType.FarthestAway:
+                    return FarthestAway.description;
+
+                case TaskType.FailShrine:
+                    return FailShrine.description;
+
+                case TaskType.OpenChests:
+                    return OpenChests.description;
+
+                case TaskType.StartTele:
+                    return StartTeleporter.description;
+
+                case TaskType.UsePrinters:
+                    return UsePrinters.description;
             }
 
             return "";
@@ -659,7 +723,7 @@ namespace Tasks
 
         void GiveReward(TaskType task, int playerNum)
         {
-            Chat.AddMessage($"Giving a reward. Notif Queue size: {NotificationQueue.readOnlyInstancesList.Count}");
+            //Chat.AddMessage($"Giving a reward. Notif Queue size: {NotificationQueue.readOnlyInstancesList.Count}");
             if(rewards[(int)task].type == RewardType.Item)
             {
                 playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
@@ -896,6 +960,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters };
 
 }

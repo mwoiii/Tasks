@@ -66,6 +66,10 @@ namespace Tasks
 
             for (int i = 0; i < startDistances.Length; i++)
             {
+                // could have used current stats instead of global stats (this run vs all runs)
+                // from Complete3StagesWithoutHealing achieve
+                // StatSheet currentStats = base.localUser.currentNetworkUser.masterPlayerStatsComponent.currentStats;
+                // if (sceneDefForCurrentScene.stageOrder >= 3 && currentStats.GetStatValueULong(StatDef.totalHealthHealed)
                 StatSheet s = TasksPlugin.GetPlayerCharacterMaster(i).playerStatsComponent.currentStats;
                 double endDist = s.GetStatValueDouble(StatDef.totalDistanceTraveled);
                 double distDelta = endDist - startDistances[i];
