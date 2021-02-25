@@ -14,6 +14,7 @@ using System.Collections;
 using System.Collections.ObjectModel;
 using MiniRpcLib;
 using MiniRpcLib.Action;
+using UnityEngine.UI;
 
 // Networking stuff. Tutorials and examples
 // https://github.com/risk-of-thunder/R2Wiki/wiki/Networking-&-Multiplayer-mods-(MiniRPCLib)
@@ -42,6 +43,7 @@ namespace Tasks
         public static event Action<int> OnDeactivate;
         public static event Action OnResetAll;
         public static event Action<int> OnPopup;
+        public static event Action<int, SkillSlot> OnAbilityUsed;
 
         public static TasksPlugin instance;
 
@@ -74,6 +76,7 @@ namespace Tasks
         HUD hud;
         ObjectivePanelController panel;
         GameObject oTrackerPrefabCopy;
+        GameObject itemIconPrefabCopy;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
@@ -106,7 +109,47 @@ namespace Tasks
                 }
                 return orig(self, param);
             };
+            /*
+            On.RoR2.GenericSkill.DeductStock += (orig, self, param) =>
+            {
+                // this is only called on specific things I believe. Not even m2 with backup mag uses this
+                Chat.AddMessage(self.skillDef.skillIndex)
+                orig(self, param);
+            };
+            */
+            // Do you reset the CD on turrets if you keep trying to place one while one is recharging?
 
+            // to do this more properly, I might have to check the stock of each ability every frame and wait for the number to go down
+            // It would break if you gained and lost stock in the same frame
+            // it appears like some skills use multiple stock. Like engi grenades or comm r shooting a bunch of bullets
+            //CharacterBody b = new CharacterBody();
+            //int a = b.skillLocator.GetSkill(SkillSlot.Primary).stock;
+
+            
+
+            // triggers on npcs attacking too. Everything in the game is a skill
+            // only runs if the skill is off cd
+            // But it also triggers on skills you can cancel. Like engi turrets or missiles. You press R, the UI shows up
+            // but then you cancel the build and the skill doesn't go on CD
+            // I'm not sure if there's a general solution for that
+            On.RoR2.CharacterBody.OnSkillActivated += (orig, self, param) =>
+            {
+                // only run this stuff on the server
+                if (NetworkServer.active)
+                {
+                    if (self.isPlayerControlled)
+                    {
+                        int i = GetPlayerNumber(self.master);
+                        SkillSlot skill = self.skillLocator.FindSkillSlot(param);
+                        //Chat.AddMessage($"Server Active?{NetworkServer.active} Player {i} used {skill:g}");
+                        OnAbilityUsed?.Invoke(i, skill);
+                    }
+                }
+                // tasks could sub to this event to see when a player used a certain ability
+                
+                //OnAbilityUsed(i, param);
+                orig(self, param);
+            };
 
             UnlockablesAPI.AddUnlockable<AirKills>(true);
             // AirKills.OnCompletion doesn't get called on the clients I don't believe.
@@ -135,6 +178,8 @@ namespace Tasks
             UnlockablesAPI.AddUnlockable<OpenChests>(true);
             UnlockablesAPI.AddUnlockable<StartTeleporter>(true);
             UnlockablesAPI.AddUnlockable<UsePrinters>(true);
+            UnlockablesAPI.AddUnlockable<OrderedSkills>(true);
+            UnlockablesAPI.AddUnlockable<DontUseSkill>(true);
 
 
             Run.onRunStartGlobal += GameSetup;
@@ -260,6 +305,7 @@ namespace Tasks
                 }
 
                 currentTasks[taskInfo.index] = taskInfo;
+                rewards[(int)taskInfo.taskType] = taskInfo.reward;
 
                 UpdateTasksUI(taskInfo.index);
             });
@@ -276,7 +322,7 @@ namespace Tasks
                 hud = orig;
                 panel = orig.objectivePanelController;
 
-                int numberOfStageTasks = 9; 
+                int numberOfStageTasks = 2; 
                 tasksUIObjects = new GameObject[numberOfStageTasks];
 
                 if(NetworkServer.active)
@@ -290,6 +336,27 @@ namespace Tasks
             if (tasksUIObjects[taskIndex] is null)
             {
                 tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+
+                
+                // rewards in totalNumTasks long
+                // taskIndex is like 9 at most.
+                int rewardIndex = currentTasks[taskIndex].taskType;
+
+                tasksUIObjects[taskIndex].SetActive(true);
+                ItemIcon icon3 = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
+                icon3.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
+
+                RectTransform rect3 = icon3.rectTransform;
+                rect3.localScale = Vector3.one * 0.5f;
+                
+
+                // does this work? Yes
+                // does it cause problems? Doesn't seem to
+                Image checkBox = tasksUIObjects[taskIndex].transform.Find("Checkbox").GetComponent<Image>();
+                checkBox.color = new Color(0, 0, 0, 0); // invisible?
+                //Chat.AddMessage("Checkbox pos: " + checkBox.transform.localPosition);
+                // UpdateStrip sets color and sprite. Destroying this might break that, but does update strip ever run for my stuff?
+                //Destroy(checkBox);
             }
             tasksUIObjects[taskIndex].SetActive(true);
 
@@ -344,6 +411,9 @@ namespace Tasks
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
+            ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
+            itemIconPrefabCopy = display.itemIconPrefab;
+
             // -1 forces it to match for deactivation purposes
             // if(id == myId || id < 0)
             // Means I don't have to iterate over every task id and check if it matches n*n times
@@ -367,8 +437,32 @@ namespace Tasks
         }
 
         public void Update()
-        {
-            //if(Input.GetKeyDown(KeyCode.F2))
+        {            
+            if (Input.GetKeyDown(KeyCode.F1))
+            {
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
+            }
+            if (Input.GetKeyDown(KeyCode.F2))
+            {
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.up);
+            }
+            if (Input.GetKeyDown(KeyCode.F3))
+            {
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.up * 10);
+            }
+            if (Input.GetKeyDown(KeyCode.F4))
+            {
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position + Vector3.up, GetPlayerCharacterMaster(0).GetBody().transform.up * 10);
+            }
+            if (Input.GetKeyDown(KeyCode.F5))
+            {
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, Vector3.zero);
+            }
         }
 
         void PopulatePlayerDictionary()
@@ -466,7 +560,7 @@ namespace Tasks
                     //updateTaskClient?.Invoke(taskIDNumbers[0], NetworkUser.readOnlyInstancesList[i]);
                     for (int j = 0; j < taskIDNumbers.Length; j++)
                     {
-                        TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length);
+                        TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length, rewards[taskIDNumbers[j]]);
                         updateTaskClient?.Invoke(info, NetworkUser.readOnlyInstancesList[i]);
                     }
                 }
@@ -574,6 +668,12 @@ namespace Tasks
 
                 case TaskType.UsePrinters:
                     return UsePrinters.description;
+
+                case TaskType.OrderedSkills:
+                    return OrderedSkills.description;
+
+                case TaskType.BadSkill:
+                    return DontUseSkill.description;
             }
 
             return "";
@@ -930,6 +1030,7 @@ namespace Tasks
             public bool completed;
             public int index;
             public int total;
+            public Reward reward;
 
             public override void Serialize(NetworkWriter writer)
             {
@@ -938,6 +1039,13 @@ namespace Tasks
                 writer.Write(completed);
                 writer.Write(index);
                 writer.Write(total);
+
+                writer.Write((int)reward.type);
+                writer.Write(reward.item.value);
+                writer.Write(reward.numItems);
+                writer.Write(reward.temporary);
+                writer.Write(reward.gold);
+                writer.Write(reward.xp);
             }
 
             public override void Deserialize(NetworkReader reader)
@@ -947,19 +1055,30 @@ namespace Tasks
                 completed = reader.ReadBoolean();
                 index = reader.ReadInt32();
                 total = reader.ReadInt32();
+
+                int type = reader.ReadInt32();
+                int item = reader.ReadInt32();
+                int numItems = reader.ReadInt32();
+                bool temp = reader.ReadBoolean();
+                int gold = reader.ReadInt32();
+                int xp = reader.ReadInt32();
+
+                PickupIndex p = new PickupIndex(item);
+                reward = new Reward((RewardType)type, p, numItems, temp, gold, xp);
             }
-            public TaskInfo(int _type, string _description, bool _completed, int _index, int _total)
+            public TaskInfo(int _type, string _description, bool _completed, int _index, int _total, Reward _reward)
             {
                 taskType = _type;
                 description = _description;
                 completed = _completed;
                 index = _index;
                 total = _total;
+                reward = _reward;
             }
 
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill };
 
 }
