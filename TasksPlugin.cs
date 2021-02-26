@@ -25,7 +25,7 @@ namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency(MiniRpcPlugin.Dependency)]
-    [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI), nameof(ItemDropAPI))]
+    [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -36,8 +36,7 @@ namespace Tasks
             GUID = "com." + AUTHOR + "." + MODNAME,
             VERSION = "0.0.0";
 
-        //Task[] allTasks;
-        //Task[] currentTasks;
+        public static TasksPlugin instance;
 
         public static event Action<int, int> OnActivate;
         public static event Action<int> OnDeactivate;
@@ -45,16 +44,11 @@ namespace Tasks
         public static event Action<int> OnPopup;
         public static event Action<int, SkillSlot> OnAbilityUsed;
 
-        public static TasksPlugin instance;
-
         public IRpcAction<int> taskCompletionClient { get; set; }
         public IRpcAction<int> taskEndedClient { get; set; }
-        //public IRpcAction<int[]> updateTasksClient { get; set; }
         public IRpcAction<TaskInfo> updateTaskClient { get; set; }
 
-        Dictionary<uint, CharacterMaster> playerDict;
-        // kinda bad form. There's already an array that holds the CharacterMasters. Why do I need to copy them?
-        // I guess I can't guarentee it stays in the same order
+        
         static List<CharacterMaster> playerCharacterMasters;
         int totalNumPlayers = 0;
 
@@ -63,19 +57,16 @@ namespace Tasks
         List<TempItem>[] TempItemLists;
         EquipmentIndex[] preonEventEqCache; // where your equipment is stored when the preon event starts and swaps it for a preon
 
-        // Client
-        TaskInfo[] currentTasks;
-        GameObject[] tasksUIObjects;
-
         // Server
         int[] stageStartTasks;
         int[] teleStartTasks;
 
-        bool activated = false;
+        // Client
+        TaskInfo[] currentTasks;
+        GameObject[] tasksUIObjects;
 
         HUD hud;
         ObjectivePanelController panel;
-        GameObject oTrackerPrefabCopy;
         GameObject itemIconPrefabCopy;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
@@ -88,86 +79,16 @@ namespace Tasks
                 instance = this;
             }
 
-            On.RoR2.UserProfile.HasAchievement += (orig, self, param) =>
-            {
-                // This seems to work
-                // It clears tasks when you load the game
-                // Also when the task is activated
-                // And when the game ends (when the game writes stats I think)
-                // When you go to the logbook in the menu
-                // It does get called a few times more than is really needed, but that's probably not a big performance hit
-                // to revoke a task more often than is needed
-
-                // Bc the tasks are temporary achievements, I never really want you to 'have' them. 
-                // Achievements are a one-and-done thing. Having them implies they are over, but the tasks are reuseable
-                // if HasAchievement() returns true, the game basically ignores it. So I just never let it return true for my tasks
-                // It might have some problems in the future
-                if(param.Contains("SOLRUN"))
-                {
-                    //Chat.AddMessage($"Matched Solrun. Removing Achievement: {param}");
-                    self.RevokeAchievement(param);
-                }
-                return orig(self, param);
-            };
-            /*
-            On.RoR2.GenericSkill.DeductStock += (orig, self, param) =>
-            {
-                // this is only called on specific things I believe. Not even m2 with backup mag uses this
-                Chat.AddMessage(self.skillDef.skillIndex)
-                orig(self, param);
-            };
-            */
-            // Do you reset the CD on turrets if you keep trying to place one while one is recharging?
-
-            // to do this more properly, I might have to check the stock of each ability every frame and wait for the number to go down
-            // It would break if you gained and lost stock in the same frame
-            // it appears like some skills use multiple stock. Like engi grenades or comm r shooting a bunch of bullets
-            //CharacterBody b = new CharacterBody();
-            //int a = b.skillLocator.GetSkill(SkillSlot.Primary).stock;
-
-            
-
-            // triggers on npcs attacking too. Everything in the game is a skill
-            // only runs if the skill is off cd
-            // But it also triggers on skills you can cancel. Like engi turrets or missiles. You press R, the UI shows up
-            // but then you cancel the build and the skill doesn't go on CD
-            // I'm not sure if there's a general solution for that
-            On.RoR2.CharacterBody.OnSkillActivated += (orig, self, param) =>
-            {
-                // only run this stuff on the server
-                if (NetworkServer.active)
-                {
-                    if (self.isPlayerControlled)
-                    {
-                        int i = GetPlayerNumber(self.master);
-                        SkillSlot skill = self.skillLocator.FindSkillSlot(param);
-                        //Chat.AddMessage($"Server Active?{NetworkServer.active} Player {i} used {skill:g}");
-                        OnAbilityUsed?.Invoke(i, skill);
-                    }
-                }
-                // tasks could sub to this event to see when a player used a certain ability
-                
-                //OnAbilityUsed(i, param);
-                orig(self, param);
-            };
-
-            UnlockablesAPI.AddUnlockable<AirKills>(true);
-            // AirKills.OnCompletion doesn't get called on the clients I don't believe.
-            AirKills.OnCompletion += TaskCompletion;
-
-            UnlockablesAPI.AddUnlockable<DamageMultipleTargets>(true);
-            // OnCompletion is static for all tasks
-            // and already accounts for knowing which task was completed
-            // so I only need to sub to it once, not once for each different task
-            //DamageMultipleTargets.OnCompletion += TaskCompletion;
-
             // How to make a new Task
             // Make the class
             // Add the UnlockablesAPI.AddUnlockable<>(true)
-            // Update the TaskType enum (and the field in the new task class
+            // Update the TaskType enum in Task.cs (and the field in the new task class)
             // Update the switch in GetTaskDescription (and the description field in the new task class)
             // change the achievement IDs
-
+            Task.OnCompletion += TaskCompletion;
+            
+            UnlockablesAPI.AddUnlockable<AirKills>(true);
+            UnlockablesAPI.AddUnlockable<DamageMultipleTargets>(true);
             UnlockablesAPI.AddUnlockable<DealDamageInTime>(true);
             UnlockablesAPI.AddUnlockable<StayInAir>(true);
             UnlockablesAPI.AddUnlockable<BiggestHit>(true);
@@ -184,66 +105,183 @@ namespace Tasks
 
             Run.onRunStartGlobal += GameSetup;
 
-            // Client only trigger
-            // started, 100%, leave
-            // server does those plus does interact, boss, interact
-            // So the client tries to run RemoveTempItems and StageEnd
+            SetupNetworking();
+            SetGameHooks();        
+        }
 
-            TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
-            {
-                // Once the tele event starts
-                // So you interact, then wait a few secs, then this triggers, then the boss spawns
-                Chat.AddMessage("TP event started");
-                // I can add additional tasks here (or maybe in OnInteraction(tele) as that runs first
-                // however, that runs twice. Once to start the tp, again to leave the stage
+        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Start is automatically called by Unity")]
+        private void Start() //Called at the first frame of the game.
+        {
 
-                
-            };
-            TeleporterInteraction.onTeleporterChargedGlobal += (TeleporterInteraction interaction) =>
+        }
+
+        public void Update()
+        {
+            if (Input.GetKeyDown(KeyCode.F1))
             {
-                // when the charge hits 100%
-                Chat.AddMessage("TP charged to 100%");
-                
-            };
-            TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
+                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
+            }
+        }
+
+        void GameSetup(Run run)
+        {
+            // run.livingPlayerCount
+            // run.participatingPlayerCount is this the total players?
+            if (!NetworkServer.active)
             {
-                // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
-                Chat.AddMessage("TP finished and player chose to leave");
+                // this is the client
+                return;
+            }
+
+            Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
+            totalNumPlayers = run.participatingPlayerCount;
+            playerCharacterMasters = new List<CharacterMaster>();
+
+            PopulatePlayerCharaterMasterList();
+            PopulateTempItemLists();
+
+            totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
+            rewards = new Reward[totalNumTasks];
+
+            ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
+            itemIconPrefabCopy = display.itemIconPrefab;
+
+            // -1 forces it to match for deactivation purposes
+            // if(id == myId || id < 0)
+            // Means I don't have to iterate over every task id and check if it matches n*n times
+            OnDeactivate?.Invoke(-1);
+        }
+
+        void PopulatePlayerCharaterMasterList()
+        {
+            for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
+            {
+                Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
+                if (CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController != null)
+                {
+                    //characterMasters
+                    playerCharacterMasters.Add(CharacterMaster.readOnlyInstancesList[i]);
+                }
+            }
+        }
+
+        void PopulateTempItemLists()
+        {
+            TempItemLists = new List<TempItem>[CharacterMaster.readOnlyInstancesList.Count];
+
+            for (int i = 0; i < TempItemLists.Length; i++)
+            {
+                TempItemLists[i] = new List<TempItem>();
+            }
+        }
+
+        void SetupNetworking()
+        {
+            var miniRpc = MiniRpc.CreateInstance(GUID);
+            taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            {
+                // code that runs on the client
+                // user specifies which user I believe so I don't have to check
+                Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
+                OnPopup?.Invoke(task);
+                RemoveObjectivePanel(task);
+            });
+
+            taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            {
+                Chat.AddMessage($"Task {task} ended. Removing UI");
+                // task ended
+                RemoveObjectivePanel(task);
+            });
+
+            updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
+            {
+                Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
+                if (currentTasks is null || currentTasks.Length != taskInfo.total)
+                {
+                    currentTasks = new TaskInfo[taskInfo.total];
+                }
+
+                currentTasks[taskInfo.index] = taskInfo;
+                rewards[(int)taskInfo.taskType] = taskInfo.reward;
+
+                UpdateTasksUI(taskInfo.index);
+            });
+        }
+
+        void SetGameHooks()
+        {
+            // Removes my task achievements so they can be achieved again
+            On.RoR2.UserProfile.HasAchievement += (orig, self, param) =>
+            {
+                // This seems to work
+                // It clears tasks when you load the game
+                // Also when the task is activated
+                // And when the game ends (when the game writes stats I think)
+                // When you go to the logbook in the menu
+                // It does get called a few times more than is really needed, but that's probably not a big performance hit
+                // to revoke a task more often than is needed
+
+                // Bc the tasks are temporary achievements, I never really want you to 'have' them. 
+                // Achievements are a one-and-done thing. Having them implies they are over, but the tasks are reuseable
+                // if HasAchievement() returns true, the game basically ignores it. So I just never let it return true for my tasks
+                // It might have some problems in the future
+                if (param.Contains("SOLRUN"))
+                {
+                    //Chat.AddMessage($"Matched Solrun. Removing Achievement: {param}");
+                    self.RevokeAchievement(param);
+                }
+                return orig(self, param);
+            };
+
+
+            // Used for tasks
+            On.RoR2.CharacterBody.OnSkillActivated += (orig, self, param) =>
+            {
+                // triggers on npcs attacking too. Everything in the game is a skill
+                // only runs if the skill is off cd
+                // But it also triggers on skills you can cancel. Like engi turrets or missiles. You press R, the UI shows up
+                // but then you cancel the build and the skill doesn't go on CD
+                // I'm not sure if there's a general solution for that
+                // only run this stuff on the server
                 if (NetworkServer.active)
                 {
-                    StageEnd();
+                    if (self.isPlayerControlled)
+                    {
+                        int i = GetPlayerNumber(self.master);
+                        SkillSlot skill = self.skillLocator.FindSkillSlot(param);
+                        //Chat.AddMessage($"Server Active?{NetworkServer.active} Player {i} used {skill:g}");
+                        OnAbilityUsed?.Invoke(i, skill);
+                    }
                 }
+
+                orig(self, param);
             };
             GlobalEventManager.OnInteractionsGlobal += (Interactor interactor, IInteractable interactable, GameObject go) =>
             {
                 // interactor is the player
                 //interactor.GetComponent<CharacterBody>();
                 string interactableType = interactable.GetType().ToString();
-                if(go?.GetComponent<ShopTerminalBehavior>())
+                if (go?.GetComponent<ShopTerminalBehavior>())
                 {
-                    // doesn't work with MultiShopController
-                    // maybe ShopTerminalBehaviour works?
-                    // it works, but it gives false positives
-                    // It triggers if you use a 3D printer
+                    // Multishops AND 3D printers
                     // [Info   : Unity Log] Interacted with multishop. InterType: RoR2.PurchaseInteraction
-                    // might need to go gameObject.name.Contains("Printer") (but not sure what the text would be
-                    Chat.AddMessage("Interacted with multishop. InterType: "+interactableType + " name: "+go.name);
+                    Chat.AddMessage("Interacted with multishop. InterType: " + interactableType + " name: " + go.name);
                     // MultiShopTerminal(Clone)
                     // DuplicatorLarge(Clone) --- Duplicator(Clone)
                 }
                 if (go?.GetComponent<ChestBehavior>())
                 {
-                    // works
-                    // [Info   : Unity Log] Interacted with chest. InterType: RoR2.PurchaseInteraction
                     // damage chest, eq chest, small chest all worked
+                    // [Info   : Unity Log] Interacted with chest. InterType: RoR2.PurchaseInteraction
                     Chat.AddMessage("Interacted with chest. InterType: " + interactableType + " name: " + go.name);
                     // CategoryChestUtility(Clone) --- CategoryChestDamage(Clone)
-                    // Chest1
+                    // Chest1 --- Chest2
                     // EquipmentBarrel(Clone)
                 }
                 if (go?.GetComponent<BarrelInteraction>())
                 {
-                    // works
                     // [Info   : Unity Log] Interacted with a barrel. InterType: RoR2.BarrelInteraction
                     Chat.AddMessage("Interacted with a barrel. InterType: " + interactableType + " name: " + go.name);
                     // Barrel1(Clone)
@@ -271,64 +309,55 @@ namespace Tasks
                     Chat.AddMessage("Interacted with TP");
                 }
             };
+            TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
+            {
+                // Once the tele event starts
+                // triggers on the client
+                // So you interact, then wait a few secs, then this triggers, then the boss spawns
+                Chat.AddMessage("TP event started");
+                // I can add additional tasks here (or maybe in OnInteraction(tele) as that runs first
+                // however, that runs twice. Once to start the tp, again to leave the stage
+            };
+            TeleporterInteraction.onTeleporterChargedGlobal += (TeleporterInteraction interaction) =>
+            {
+                // when the charge hits 100%
+                // triggers on the client
+                Chat.AddMessage("TP charged to 100%");
+
+            };
+            TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
+            {
+                // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
+                // triggers on the client
+                Chat.AddMessage("TP finished and player chose to leave");
+                if (NetworkServer.active)
+                {
+                    StageEnd();
+                }
+            };
             BossGroup.onBossGroupDefeatedServer += (BossGroup group) =>
             {
                 // this works. Timer too
                 Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
             };
 
-            
 
-            var miniRpc = MiniRpc.CreateInstance(GUID);
-            taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            // controls starting tasks
+            On.RoR2.UI.HUD.Awake += (orig, self) =>
             {
-                // code that runs on the client
-                // user specifies which user I believe so I don't have to check
-                Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
-                OnPopup?.Invoke(task);
-                RemoveObjectivePanel(task);
-            });
-
-            taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
-            {
-                Chat.AddMessage($"Task {task} ended. Removing UI");
-                // task ended
-                RemoveObjectivePanel(task);
-            });
-
-            updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
-            {
-                Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
-                if(currentTasks is null || currentTasks.Length != taskInfo.total)
-                {
-                    currentTasks = new TaskInfo[taskInfo.total];
-                }
-
-                currentTasks[taskInfo.index] = taskInfo;
-                rewards[(int)taskInfo.taskType] = taskInfo.reward;
-
-                UpdateTasksUI(taskInfo.index);
-            });
-
-
-            On.RoR2.UI.HUD.Awake += (self, orig) =>
-            {
-                // This works now
-                // Gotta grab panel from orig instead of trying to find it
-                // and have to remember to activate the spawned GO
-                // This also gets called at the start of each stage. Still need to test more to see if player bodies are nul or not
+                // Have to remember to activate the spawned GO
+                // This also gets called at the start of each stage. 
                 // GenerateTasks waits 3 seconds and that seems to do it
-                self(orig);
-                hud = orig;
-                panel = orig.objectivePanelController;
+                orig(self);
+                hud = self;
+                panel = self.objectivePanelController;
 
-                int numberOfStageTasks = 2; 
+                int numberOfStageTasks = 3;
                 tasksUIObjects = new GameObject[numberOfStageTasks];
 
-                if(NetworkServer.active)
+                if (NetworkServer.active)
                     GenerateTasks(numberOfStageTasks);
-                
-            };   
+            };
         }
 
         void UpdateTasksUI(int taskIndex, string text = "")
@@ -337,26 +366,19 @@ namespace Tasks
             {
                 tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
 
-                
-                // rewards in totalNumTasks long
+                // rewards is totalNumTasks long
                 // taskIndex is like 9 at most.
                 int rewardIndex = currentTasks[taskIndex].taskType;
 
                 tasksUIObjects[taskIndex].SetActive(true);
-                ItemIcon icon3 = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
-                icon3.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
+                ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
+                icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
 
-                RectTransform rect3 = icon3.rectTransform;
-                rect3.localScale = Vector3.one * 0.5f;
+                RectTransform rect = icon.rectTransform;
+                rect.localScale = Vector3.one * 0.5f;
                 
-
-                // does this work? Yes
-                // does it cause problems? Doesn't seem to
                 Image checkBox = tasksUIObjects[taskIndex].transform.Find("Checkbox").GetComponent<Image>();
-                checkBox.color = new Color(0, 0, 0, 0); // invisible?
-                //Chat.AddMessage("Checkbox pos: " + checkBox.transform.localPosition);
-                // UpdateStrip sets color and sprite. Destroying this might break that, but does update strip ever run for my stuff?
-                //Destroy(checkBox);
+                checkBox.color = new Color(0, 0, 0, 0); // invisible
             }
             tasksUIObjects[taskIndex].SetActive(true);
 
@@ -389,121 +411,8 @@ namespace Tasks
             }
         }
 
-        void GameSetup(Run run)
-        {
-            // run.livingPlayerCount
-            // run.participatingPlayerCount is this the total players?
-            if(!NetworkServer.active)
-            {
-                // this is the client
-                return;
-            }
-
-            Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
-            totalNumPlayers = run.participatingPlayerCount;
-            playerDict = new Dictionary<uint, CharacterMaster>();
-            playerCharacterMasters = new List<CharacterMaster>();
-            
-            PopulatePlayerDictionary();
-
-            PopulateTempItemLists();
-
-            totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
-            rewards = new Reward[totalNumTasks];
-
-            ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
-            itemIconPrefabCopy = display.itemIconPrefab;
-
-            // -1 forces it to match for deactivation purposes
-            // if(id == myId || id < 0)
-            // Means I don't have to iterate over every task id and check if it matches n*n times
-            OnDeactivate?.Invoke(-1);
-
-
-            // Moved to UI.Awake bc it's called every stage
-            //GenerateTasks(4);
-
-            // How to generate tasks later maybe
-            // RoR2.UI.ObjectivePanelController
-            // Line 102
-            // TeleporterInteraction instance = TeleporterInteraction.instance;
-            // if (instance.isCharged && !instance.isInFinalSequence)
-        }
-
-        [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Start is automatically called by Unity")]
-        private void Start() //Called at the first frame of the game.
-        {
-
-        }
-
-        public void Update()
-        {            
-            if (Input.GetKeyDown(KeyCode.F1))
-            {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
-            }
-            if (Input.GetKeyDown(KeyCode.F2))
-            {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.up);
-            }
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.up * 10);
-            }
-            if (Input.GetKeyDown(KeyCode.F4))
-            {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position + Vector3.up, GetPlayerCharacterMaster(0).GetBody().transform.up * 10);
-            }
-            if (Input.GetKeyDown(KeyCode.F5))
-            {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, Vector3.zero);
-            }
-        }
-
-        void PopulatePlayerDictionary()
-        {
-            Chat.AddMessage("Trying to fill dictionary");
-            //CharacterMaster.readOnlyInstancesList
-            for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
-            {
-                Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
-                playerDict[CharacterMaster.readOnlyInstancesList[i].netId.Value] = CharacterMaster.readOnlyInstancesList[i];
-
-                if(CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController != null)
-                {
-                    //characterMasters
-                    playerCharacterMasters.Add(CharacterMaster.readOnlyInstancesList[i]);
-                }
-            }
-
-            // Only runs the loop once
-            //[Info: Unity Log] Trying to fill dictionary
-            //[Info   : Unity Log] Name: CommandoMaster(Clone) NetID: 6 LocalPlayer: False
-            // localPlayer being false is weird
-        }
-
-        void PopulateTempItemLists()
-        {
-
-            TempItemLists = new List<TempItem>[CharacterMaster.readOnlyInstancesList.Count];
-            Chat.AddMessage($"Trying to create {CharacterMaster.readOnlyInstancesList.Count} temp item lists. Created {TempItemLists.Length}");
-            // [Info   : Unity Log] Trying to create 1 temp item lists. Created 1
-
-            for (int i = 0; i < TempItemLists.Length; i++)
-            {
-                TempItemLists[i] = new List<TempItem>();
-            }
-        }
-
         void GenerateTasks(int numTasks)
         {
-
-            //StartTasks(1);
             StartCoroutine(StartTasksWorkaround(numTasks));
         }
 
@@ -532,7 +441,7 @@ namespace Tasks
                 // rewards[TaskType.DamageInTime]
                 // array is as large as TaskType enum (-1)
                 // but not necessarily full. Maybe only tasks 3, 5, 8 are active
-                rewards[taskIDNumbers[i]] = CreateRandomReward();
+                rewards[taskIDNumbers[i]] = RewardBuilder.CreateRandomReward();
 
                 // These 2 lines for debugging
                 int r = taskIDNumbers[i];
@@ -618,7 +527,6 @@ namespace Tasks
                 Chat.AddMessage($"Not enough tasks({allTasks.Count}). Wanted {count}.");
             }
             
-
             for (int i = 0; i < results.Length; i++)
             {
                 int r = UnityEngine.Random.Range(0, allTasks.Count);
@@ -693,8 +601,7 @@ namespace Tasks
 
             // Bottom middle of the notification is the center of the screen
             // Text is left aligned to the box so the text isn't in the center
-            StartCoroutine(MoveNotificationLater(n, new Vector3(1920f / 2, 1080f / 2, 0)));
-
+            n.GenericNotification.transform.position = new Vector3(1920f / 2, 1080f / 2, 0);
             //CameraRigController.readOnlyInstancesList[0].hud.objectivePanelController.objectiveTrackerContainer
 
             //TestNotifications();
@@ -731,7 +638,7 @@ namespace Tasks
                     //go.transform.position = NotificationQueue.readOnlyInstancesList[0].transform.position + new Vector3(i / 3f, j / 3f, 0);
                     Notification n = go.AddComponent<Notification>();
                     n.enabled = false;
-                    n.GetDescription = () => $"Description: {tempi*200}, {tempj*200}";
+                    n.GetDescription = () => $"Description: {tempi * 200}, {tempj * 200}";
                     n.GetTitle = () => $"Title: {tempi}, {tempj}";
                     //n.SetPosition(new Vector3(i/3f, j/3f, 0));
                     //n.Parent = NotificationQueue.readOnlyInstancesList[0].transform;
@@ -739,7 +646,7 @@ namespace Tasks
                     n.enabled = true;
 
                     // Seems like these correspond to 1920x1080
-                    StartCoroutine(MoveNotificationLater(n, new Vector3(tempi * 200, tempj * 200, 0)));
+                    n.GenericNotification.transform.position = new Vector3(tempi * 200, tempj * 200, 0);
                     //StartCoroutine(SetupParentLater(n, go.transform));
                     //n.enabled = true;
                     // I think awake gets called last
@@ -751,55 +658,9 @@ namespace Tasks
             }
         }
 
-        IEnumerator SetupParentLater(Notification n, Transform parent)
-        {
-            // this.currentNotification.GetComponent<RectTransform>().SetParent(base.GetComponent<RectTransform>(), false);
-
-            yield return null;
-            n.Parent = parent;
-        }
-
-        IEnumerator MoveNotificationLater(Notification n, Vector3 movement, bool overTime=false)
-        {
-            //Chat.AddMessage("Trying to move the notification");
-            yield return new WaitForSeconds(0.2f);
-            
-
-            // move over time
-            if (overTime)
-            {
-                while (n != null)
-                {
-                    n.GenericNotification.transform.position += movement;
-                    yield return null; // skip a frame
-                    yield return null;
-                }
-            }
-            else
-            {
-                n.GenericNotification.transform.position = movement;
-            }
-            //n.SetPosition(movement);
-        }
-
-        void TaskCompletion(TaskType taskType, int playerNum)
-        {
-            Chat.AddMessage("SERVER("+(NetworkServer.active?"active":"not active")+"): Player "+playerNum + " completed task " + taskType.ToString());
-            // this works at least
-            activated = false;
-            //GiveRandomItem(netID);
-            GiveReward(taskType, playerNum);
-            //RpcTaskCompletion(taskType, playerNum);
-            // This should send the message to the client
-            // Why is it backwards from how I wrote it? Weird
-            // Does this run on each client or jsut the specific one?
-            taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
-            taskEndedClient.Invoke((int)taskType); // hope this sends to everyone
-        }
-
         public static int GetPlayerNumber(CharacterMaster charMaster)
         {
-            //playerCharacterMasters
+            //player CharacterMasters
             for (int i = 0; i < playerCharacterMasters.Count; i++)
             {
                 if(playerCharacterMasters[i] == charMaster)
@@ -816,14 +677,18 @@ namespace Tasks
             return playerCharacterMasters[playerNum];
         }
 
-        void GiveRandomItem(int playerNum)
+        void TaskCompletion(TaskType taskType, int playerNum)
         {
-            playerCharacterMasters[playerNum].inventory.GiveRandomItems(1);
+            Chat.AddMessage("SERVER(" + (NetworkServer.active ? "active" : "not active") + "): Player " + playerNum + " completed task " + taskType.ToString());
+            // this works at least
+            GiveReward(taskType, playerNum);
+
+            taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
+            taskEndedClient.Invoke((int)taskType); // hope this sends to everyone
         }
 
         void GiveReward(TaskType task, int playerNum)
         {
-            //Chat.AddMessage($"Giving a reward. Notif Queue size: {NotificationQueue.readOnlyInstancesList.Count}");
             if(rewards[(int)task].type == RewardType.Item)
             {
                 playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
@@ -871,21 +736,16 @@ namespace Tasks
             else
             {
                 // give gold or xp
-                // but for now, just give a random item
-                Chat.AddMessage("Giving Random Item");
-                GiveRandomItem(playerNum);
             }
         }
 
         void RecordTempItems(int playerNum, PickupIndex item, int count)
         {
-            
             if(playerNum < 0)
             {
                 Chat.AddMessage("Didn't find a match. Couldn't record items");
                 return;
             }
-
             TempItemLists[playerNum].Add(new TempItem(item, count));
         }
 
@@ -896,7 +756,7 @@ namespace Tasks
 
                 List<TempItem> list = TempItemLists[i];
                 int count = 0;
-                Chat.AddMessage($"List count: {list.Count}");
+                //Chat.AddMessage($"List count: {list.Count}");
                 while(list.Count > 0)
                 {
                     count++;
@@ -907,62 +767,13 @@ namespace Tasks
                     }
                         
                     TempItem temp = list[0];
-                    Chat.AddMessage($"Removing {temp.count} {temp.item:g}");
-                    
+                    //Chat.AddMessage($"Removing {temp.count} {temp.item:g}");
+                    // maybe I should do a chat message like when someone picks up an item
+
                     playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, temp.count);
                     list.RemoveAt(0);
                 }
             }
-        }
-
-        Reward CreateRandomReward()
-        {
-
-            // ==== Type of Reward
-            WeightedSelection<RewardType> typeSelection = new WeightedSelection<RewardType>();
-
-            typeSelection.AddChoice(RewardType.Item, 2);
-            typeSelection.AddChoice(RewardType.TempItem, 1);
-
-            RewardType type = typeSelection.Evaluate(UnityEngine.Random.value);
-
-
-            // ===== Item
-            WeightedSelection<ItemDropLocation> chestSelection = new WeightedSelection<ItemDropLocation>();
-
-            // wiki says weights are small:24, med:4, large:2, specialty:2
-            // specialty are so low just to be more rare, not bc they are too powerful
-            // so I'm fine with increasing their weight
-            chestSelection.AddChoice(ItemDropLocation.SmallChest, 24);
-            chestSelection.AddChoice(ItemDropLocation.MediumChest, 4);
-            chestSelection.AddChoice(ItemDropLocation.UtilityChest, 8);
-            chestSelection.AddChoice(ItemDropLocation.DamageChest, 8);
-            chestSelection.AddChoice(ItemDropLocation.HealingChest, 8);
-            chestSelection.AddChoice(ItemDropLocation.LargeChest, 1); // legendary
-            
-
-            // Can I give players use items in the same way as I give them regular items?
-            //chestSelection.AddChoice(ItemDropLocation.EquipmentChest, 20);
-
-            // EntityStates.ScavMonster.FindItem uses random.value in evaluate. It returns a value between 0.0 and 1.0
-            // multiplies this value by the total weight then figures out which selection that corresponds to
-            // Using the example values of 24, 4, 8, 8, 8, 8, 1 = 61
-            // 61 * value = 21(for example) would map to a small chest because 21 < 24
-            // 43 would map to 24 +4 +8 =36 < 43 < 24+4+8+8 =44 so the damage chest
-            ItemDropLocation chest = chestSelection.Evaluate(UnityEngine.Random.value);
-
-            // get a random item from a specific chest
-            // and turn it into an itemIndex (as opposed to a pickupIndex which seems to be depreciated
-            PickupIndex pickupIndex = ItemDropAPI.GetSelection(chest, UnityEngine.Random.value);
-            //PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
-            //ItemIndex item = def.itemIndex;
-            // ===== End Item
-
-
-            Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
-
-            Reward reward = new Reward(type, pickupIndex, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
-            return reward;
         }
 
         public static void StartPreonEvent()
@@ -987,41 +798,6 @@ namespace Tasks
                 playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.EquipmentMagazine, 5);
             }
         }
-
-        public struct Reward
-        {
-            public Reward(RewardType _type, PickupIndex _item, int _numItems, bool _temporary, int _gold, int _xp)
-            {
-                type = _type;
-                item = _item;
-                numItems = _numItems;
-                temporary = _temporary;
-                gold = _gold;
-                xp = _xp;
-            }
-
-            public RewardType type;
-            public PickupIndex item;
-            public int numItems;
-            public bool temporary;
-            public int gold;
-            public int xp;
-
-            public override string ToString() => $"{type:g}, {item:g}";
-        }
-
-        public struct TempItem
-        {
-            public TempItem(PickupIndex _item, int _count)
-            {
-                item = _item;
-                count = _count;
-            }
-            public PickupIndex item;
-            public int count;
-        }
-
-        public enum RewardType { Item, TempItem, Gold, Xp };
 
         public class TaskInfo : MessageBase
         {
@@ -1079,6 +855,6 @@ namespace Tasks
             public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
         }
     }
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill };
+    
 
 }

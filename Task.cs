@@ -7,6 +7,8 @@ using RoR2;
 
 namespace Tasks
 {
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill };
+
     // Put plugin here
     // C:\Program Files (x86)\Steam\steamapps\common\Risk of Rain 2\BepInEx\plugins\MyMods
 
@@ -100,10 +102,6 @@ namespace Tasks
             base.OnUninstall();
         }
 
-        virtual protected void CompleteTask()
-        {
-            // suppress errors for now
-        }
         virtual protected void CompleteTask(int playerNum)
         {
             //ShowPopup();
