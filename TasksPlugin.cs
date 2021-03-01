@@ -69,6 +69,10 @@ namespace Tasks
         ObjectivePanelController panel;
         GameObject itemIconPrefabCopy;
 
+        // Testing
+        bool notifTestingFormat = true;
+
+
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
         {
@@ -122,6 +126,18 @@ namespace Tasks
                 PickupIndex p = new PickupIndex(ItemIndex.Bear);
                 PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
             }
+            if (Input.GetKeyDown(KeyCode.F2))
+            {
+                for (int i = 1; i < totalNumTasks; i++)
+                {
+                    CreateNotification(i);
+                }
+            }
+            if (Input.GetKeyDown(KeyCode.F3))
+            {
+                notifTestingFormat = !notifTestingFormat;
+            }
+
         }
 
         void GameSetup(Run run)
@@ -136,7 +152,7 @@ namespace Tasks
 
             Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
             totalNumPlayers = run.participatingPlayerCount;
-            playerCharacterMasters = new List<CharacterMaster>();
+            playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
 
             PopulatePlayerCharaterMasterList();
             PopulateTempItemLists();
@@ -144,8 +160,18 @@ namespace Tasks
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
+            Chat.AddMessage("ItemInventoryDisplay");
+            // why did this used to work?
             ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
-            itemIconPrefabCopy = display.itemIconPrefab;
+            if (display is null)
+            {
+                // why are you null
+                Chat.AddMessage("Display is null");
+            }
+            else
+            {
+                itemIconPrefabCopy = display.itemIconPrefab;
+            }
 
             // -1 forces it to match for deactivation purposes
             // if(id == myId || id < 0)
@@ -184,6 +210,7 @@ namespace Tasks
                 // code that runs on the client
                 // user specifies which user I believe so I don't have to check
                 Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
+                CreateNotification(task);
                 OnPopup?.Invoke(task);
                 RemoveObjectivePanel(task);
             });
@@ -352,7 +379,7 @@ namespace Tasks
                 hud = self;
                 panel = self.objectivePanelController;
 
-                int numberOfStageTasks = 3;
+                int numberOfStageTasks = 5;
                 tasksUIObjects = new GameObject[numberOfStageTasks];
 
                 if (NetworkServer.active)
@@ -371,9 +398,13 @@ namespace Tasks
                 int rewardIndex = currentTasks[taskIndex].taskType;
 
                 tasksUIObjects[taskIndex].SetActive(true);
+                if(itemIconPrefabCopy is null)
+                {
+                    itemIconPrefabCopy = FindObjectOfType<ItemInventoryDisplay>().itemIconPrefab;
+                }
                 ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
                 icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
-
+                
                 RectTransform rect = icon.rectTransform;
                 rect.localScale = Vector3.one * 0.5f;
                 
@@ -402,7 +433,22 @@ namespace Tasks
                     }
 
                     // TODO: Do something to show it was completed other than just hiding it
-                    tasksUIObjects[i].SetActive(false);
+                    //tasksUIObjects[i].SetActive(false);
+                    TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[i].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+                    if(textMeshLabel is null)
+                    {
+                        Chat.AddMessage("Couldn't strikethrough");
+                    }
+                    else
+                    {
+                        textMeshLabel.color = Color.grey;
+                        textMeshLabel.fontStyle |= TMPro.FontStyles.Strikethrough;
+
+                        ItemIcon icon = tasksUIObjects[i].GetComponentInChildren<ItemIcon>();
+                        if(icon)
+                            icon.image.color = Color.grey;
+                    }
+                    
                     // should I just destroy them? Doesn't seem to help
                     // They might get removed twice. Once if you complete them and then again at the end
                     // destroying them doesn't make them null so it's hard to check for
@@ -587,6 +633,43 @@ namespace Tasks
             return "";
         }
 
+        void CreateNotification(int task)
+        {
+            for (int i = 0; i < tasksUIObjects.Length; i++)
+            {
+                if (currentTasks[i].taskType == task)
+                {
+                    TaskType taskType = (TaskType)task;
+
+                    GameObject go = new GameObject($"{taskType:g} completed notification");
+                    Notification n = go.AddComponent<Notification>();
+                    n.enabled = false;
+                    // default scale is 1.3
+                    n.RootObject.transform.localScale = Vector3.one * 0.67f;
+                    n.GetDescription = () => $"You completed {taskType:g}";
+                    n.GetTitle = () => $"Task Complete!";
+                    n.enabled = true;
+
+                    if (notifTestingFormat)
+                    {
+                        // 425, 326 + 1.5fx is alright. Long titles might bleed over into the objective panel
+                        n.GenericNotification.transform.localPosition = new Vector3(435, 326, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
+                        n.RootObject.transform.Find("TextArea").transform.localScale = Vector3.one * 1.5f; // embiggen text
+                    }
+                    else
+                    {
+                        // now that i'm jsut doing the strikethrough
+                        n.GenericNotification.transform.SetParent(tasksUIObjects[i].transform, false);
+                        n.GenericNotification.transform.localPosition = new Vector3(-200, -32, 0); // close, but the scale has been reset.
+                        // This version works, but it's just a little off
+                        // I'd need to reduce the scale, and increase the text scale
+                        // and move it closer. -200, -32 is alright, but it could be closer. And the other version already has that stuff done
+                    }
+                  
+                    break;
+                }
+            }
+        }
         void NotificationTest()
         {
             Chat.AddMessage("Trying to make a notification");
