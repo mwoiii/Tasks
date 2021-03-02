@@ -8,7 +8,7 @@ namespace Tasks
 {
     class AirKills : Task
     {
-        public static new string description { get; } = "Get 3 kills whilst airborne";
+        protected new string description { get; } = "Get 3 kills whilst airborne";
 
         // so doing just this doesn't seem to work
         //protected static new string thisClass = "AIR_KILLS_";
@@ -34,6 +34,11 @@ namespace Tasks
         //delegate void killDelegate(DamageReport damageReport);
 
         List<CharacterMotor.HitGroundDelegate> groundDelegateList = new List<CharacterMotor.HitGroundDelegate>();
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

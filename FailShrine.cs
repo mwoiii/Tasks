@@ -7,7 +7,7 @@ namespace Tasks
 {
     class FailShrine : Task
     {
-        public static new string description { get; } = "First to Fail";
+        protected new string description { get; } = "First to Fail";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_FAIL_SHRINE_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_FAIL_SHRINE_REWARD_ID"; // Delete me from XML too
@@ -21,6 +21,10 @@ namespace Tasks
         public override TaskType type { get; } = TaskType.FailShrine;
         protected override string name { get; } = "Fail a Chance Shrine";
 
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

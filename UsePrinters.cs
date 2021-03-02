@@ -8,7 +8,7 @@ namespace Tasks
 {
     class UsePrinters : Task
     {
-        public static new string description { get; } = "Use 2 Different 3D Printers";
+        protected new string description { get; } = "Use 2 Different 3D Printers";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_REWARD_ID"; // Delete me from XML too
@@ -23,8 +23,13 @@ namespace Tasks
         protected override string name { get; } = "Use Printers";
 
         HashSet<GameObject>[] printersUsed;
-        int numToUse = 2; 
+        int numToUse = 2;
         // I would like to be able to check if there are at least this many printers on the stage
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

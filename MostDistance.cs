@@ -8,7 +8,7 @@ namespace Tasks
 {
     class MostDistance : Task
     {
-        public static new string description { get; } = "Most distance wins";
+        protected string description { get; } = "Most distance wins";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_MOST_DISTANCE_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_MOST_DISTANCE_REWARD_ID"; // Delete me from XML too
@@ -24,6 +24,16 @@ namespace Tasks
 
         double[] startDistances;
         bool active = false;
+
+        public override bool CanActivate(int numPlayers)
+        {
+            return numPlayers > 1;
+        }
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

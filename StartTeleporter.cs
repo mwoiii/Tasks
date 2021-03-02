@@ -8,7 +8,7 @@ namespace Tasks
 {
     class StartTeleporter : Task
     {
-        public static new string description { get; } = "Better be First";
+        protected new string description { get; } = "Better be First";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_ACTIVATE_TELE_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_ACTIVATE_TELE_REWARD_ID"; // Delete me from XML too
@@ -21,6 +21,16 @@ namespace Tasks
         */
         public override TaskType type { get; } = TaskType.StartTele;
         protected override string name { get; } = "Activate the Teleporter";
+
+        public override bool CanActivate(int numPlayers)
+        {
+            return numPlayers > 1;
+        }
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

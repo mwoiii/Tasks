@@ -8,7 +8,7 @@ namespace Tasks
 {
     class DamageMultipleTargets : Task
     {
-        public static new string description { get; } = "Have 4 enemies damage by you alive at once";
+        protected new string description { get; } = "Have 4 enemies damaged by you alive at once";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_MULTIPLE_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_MULTIPLE_REWARD_ID"; // Delete me from XML too
@@ -27,6 +27,10 @@ namespace Tasks
         // so maybe I can't tell them apart? Like maybe I can't add 2 different beetles to the hash
         HashSet<GameObject>[] targets;
 
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

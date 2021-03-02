@@ -7,7 +7,7 @@ namespace Tasks
 {
     class OrderedSkills : Task
     {
-        public static new string description { get; } = "Use skills in a specific order";
+        protected new string description { get; } = "Use skills in a specific order";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_ORDERED_SKILLS_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_ORDERED_SKILLS_REWARD_ID"; // Delete me from XML too
@@ -23,6 +23,11 @@ namespace Tasks
 
         SkillSlot[] order;
         int[] whereInOrder;
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

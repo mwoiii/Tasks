@@ -605,9 +605,16 @@ namespace Tasks
             for (int i = 0; i < totalNumTasks-1; i++)
             {
                 // +1 to ignore the base task
-                allTasks.Add(i + 1);
-            }
+                if(taskCopies[i].CanActivate(totalNumPlayers))
+                {
+                    allTasks.Add(i + 1);
 
+                }
+                else
+                {
+                    Chat.AddMessage($"Skipped {(TaskType)(i+1):g}");
+                }
+            }
             if (count > allTasks.Count)
             {
                 // uh oh
@@ -627,8 +634,8 @@ namespace Tasks
         string GetTaskDescription(int taskType)
         {
             // can be simplified to this I think
-            //return taskCopies[taskType - 1].GetDescription();
-
+            return taskCopies[taskType - 1].GetDescription();
+            /*
             switch ((TaskType)taskType)
             {
                 case TaskType.AirKills:
@@ -675,6 +682,7 @@ namespace Tasks
             }
 
             return "";
+            */
         }
 
         void CreateNotification(int task)

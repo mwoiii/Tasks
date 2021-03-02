@@ -7,7 +7,7 @@ namespace Tasks
 {
     class BiggestHit : Task
     {
-        public static new string description { get; } = "Biggest hit wins";
+        protected new string description { get; } = "Biggest hit wins";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_REWARD_ID"; // Delete me from XML too
@@ -35,6 +35,16 @@ namespace Tasks
 
         float[] biggestHit;
         bool active = false;
+
+        public override bool CanActivate(int numPlayers)
+        {
+            return numPlayers > 1;
+        }
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

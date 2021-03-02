@@ -7,7 +7,7 @@ namespace Tasks
 {
     class DontUseSkill : Task
     {
-        public static new string description { get; } = "Last to use their utility skill wins";
+        protected new string description { get; } = "Last to use their utility skill wins";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_BAD_SKILL_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_BAD_SKILL_REWARD_ID"; // Delete me from XML too
@@ -25,6 +25,16 @@ namespace Tasks
         bool[] playerFailed;
         int numPlayersFailed;
         bool active = false;
+
+        public override bool CanActivate(int numPlayers)
+        {
+            return numPlayers > 1;
+        }
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

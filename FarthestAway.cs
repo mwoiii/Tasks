@@ -9,7 +9,7 @@ namespace Tasks
 {
     class FarthestAway : Task
     {
-        public static new string description { get; } = "Farthest away in 20s wins";
+        protected new string description { get; } = "Farthest away in 20s wins";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_REWARD_ID"; // Delete me from XML too
@@ -25,6 +25,16 @@ namespace Tasks
 
         Vector3[] startPositions;
         bool active = false;
+
+        public override bool CanActivate(int numPlayers)
+        {
+            return numPlayers > 1;
+        }
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

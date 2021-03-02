@@ -22,7 +22,7 @@ namespace Tasks
         static string myName = "SOLRUN_";
         static string myMod = "TASKS_";
         protected static string thisClass = "BASE_TASK_";
-        public static string description { get; } = "Base description";
+        protected string description { get; } = "Base description";
 
         /*
         public override string AchievementIdentifier { get; } = myName + myMod + thisClass + "ACHIEVEMENT_ID";
@@ -160,6 +160,11 @@ namespace Tasks
                 profile.RevokeUnlockable(UnlockableCatalog.GetUnlockableDef(UnlockableIdentifier));
             }
             */
+        }
+
+        public virtual bool CanActivate(int numPlayers)
+        {
+            return true;
         }
 
         void Activate(int id, int numPlayers)

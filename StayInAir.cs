@@ -8,7 +8,7 @@ namespace Tasks
 {
     class StayInAir : Task
     {
-        public static new string description { get; } = "Stay airborne for 10 seconds";
+        protected new string description { get; } = "Stay airborne for 10 seconds";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_STAY_AIRBORNE_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_STAY_AIRBORNE_REWARD_ID"; // Delete me from XML too
@@ -25,13 +25,20 @@ namespace Tasks
         CharacterBody[] bodies;
 
         float[] timeInAir;
-        float timeToStayInAir = 10;
+        float timeToStayInAir = 5;
+
+        public override string GetDescription()
+        {
+            return $"Stay in the air for {Math.Round(timeToStayInAir, 1)} seconds";
+        }
 
         protected override void SetHooks(int numPlayers)
         {
             Chat.AddMessage($"Set Hooks in Stay Airborne. {numPlayers} players");
 
             base.SetHooks(numPlayers);
+
+            timeToStayInAir = 3 + Run.instance.difficultyCoefficient;
 
             if (timeInAir is null || timeInAir.Length != numPlayers)
             {
@@ -64,7 +71,6 @@ namespace Tasks
             base.Unhook();
         }
 
-        
         private void AirborneFixedUpdate()
         {
             // does this break when one player dies?

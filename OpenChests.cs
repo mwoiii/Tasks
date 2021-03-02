@@ -8,7 +8,7 @@ namespace Tasks
 {
     class OpenChests : Task
     {
-        public static new string description { get; } = "First to open 5 chests wins (multishops count too)";
+        protected new string description { get; } = "First to open 5 chests wins (multishops count too)";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_OPEN_CHESTS_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_OPEN_CHESTS_REWARD_ID"; // Delete me from XML too
@@ -23,6 +23,11 @@ namespace Tasks
 
         int[] chestsOpened;
         int numToOpen = 5;
+
+        public override string GetDescription()
+        {
+            return description;
+        }
 
         protected override void SetHooks(int numPlayers)
         {

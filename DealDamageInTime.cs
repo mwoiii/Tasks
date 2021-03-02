@@ -10,7 +10,7 @@ namespace Tasks
     class DealDamageInTime : Task
     {
 
-        public static new string description { get; } = "Deal 500 damage in 5 seconds";
+        protected new string description { get; } = "Deal 500 damage in 5 seconds";
         /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_IN_TIME_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_IN_TIME_REWARD_ID"; // Delete me from XML too
@@ -27,6 +27,12 @@ namespace Tasks
         float timeLimit = 5;
 
         float[] currentDamage;
+
+        public override string GetDescription()
+        {
+            // N0 turns it into a number with 0 decimal places i.e 5672.35 -> 5,672
+            return $"Deal {damageToDeal:N0} damage in 5 seconds";
+        }
 
         protected override void SetHooks(int numPlayers)
         {
@@ -51,11 +57,6 @@ namespace Tasks
             Reset();
 
             base.Unhook();
-        }
-
-        public override string GetDescription()
-        {
-            return $"Deal {damageToDeal} damage in 5 seconds";
         }
 
         public void OnDamage(DamageReport report)
