@@ -60,6 +60,7 @@ namespace Tasks
         // Server
         int[] stageStartTasks;
         int[] teleStartTasks;
+        Task[] taskCopies;
 
         // Client
         TaskInfo[] currentTasks;
@@ -83,14 +84,15 @@ namespace Tasks
                 instance = this;
             }
 
+            Task.OnCompletion += TaskCompletion;
+
             // How to make a new Task
             // Make the class
             // Add the UnlockablesAPI.AddUnlockable<>(true)
             // Update the TaskType enum in Task.cs (and the field in the new task class)
             // Update the switch in GetTaskDescription (and the description field in the new task class)
             // change the achievement IDs
-            Task.OnCompletion += TaskCompletion;
-            
+            /*
             UnlockablesAPI.AddUnlockable<AirKills>(true);
             UnlockablesAPI.AddUnlockable<DamageMultipleTargets>(true);
             UnlockablesAPI.AddUnlockable<DealDamageInTime>(true);
@@ -105,7 +107,7 @@ namespace Tasks
             UnlockablesAPI.AddUnlockable<UsePrinters>(true);
             UnlockablesAPI.AddUnlockable<OrderedSkills>(true);
             UnlockablesAPI.AddUnlockable<DontUseSkill>(true);
-
+            */
 
             Run.onRunStartGlobal += GameSetup;
 
@@ -150,6 +152,8 @@ namespace Tasks
                 return;
             }
 
+            TaskSetup();
+
             Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
             totalNumPlayers = run.participatingPlayerCount;
             playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
@@ -177,6 +181,43 @@ namespace Tasks
             // if(id == myId || id < 0)
             // Means I don't have to iterate over every task id and check if it matches n*n times
             OnDeactivate?.Invoke(-1);
+        }
+
+        void TaskSetup()
+        {
+            Chat.AddMessage("Creating Task Objects");
+            taskCopies = new Task[14];
+
+            AirKills airKills = new AirKills();
+            DamageMultipleTargets task2 = new DamageMultipleTargets();
+            DealDamageInTime task3 = new DealDamageInTime();
+            StayInAir task4 = new StayInAir();
+            BiggestHit task5 = new BiggestHit();
+            MostDistance task6 = new MostDistance();
+            PreonEvent task7 = new PreonEvent();
+            FarthestAway task8 = new FarthestAway();
+            FailShrine task9 = new FailShrine();
+            OpenChests task10 = new OpenChests();
+            StartTeleporter task11 = new StartTeleporter();
+            UsePrinters task12 = new UsePrinters();
+            OrderedSkills task13 = new OrderedSkills();
+            DontUseSkill task14 = new DontUseSkill();
+
+            // -1 to ignore the base type
+            taskCopies[(int)airKills.type - 1] = airKills;
+            taskCopies[(int)task2.type - 1] = task2;
+            taskCopies[(int)task3.type - 1] = task3;
+            taskCopies[(int)task4.type - 1] = task4;
+            taskCopies[(int)task5.type - 1] = task5;
+            taskCopies[(int)task6.type - 1] = task6;
+            taskCopies[(int)task7.type - 1] = task7;
+            taskCopies[(int)task8.type - 1] = task8;
+            taskCopies[(int)task9.type - 1] = task9;
+            taskCopies[(int)task10.type - 1] = task10;
+            taskCopies[(int)task11.type - 1] = task11;
+            taskCopies[(int)task12.type - 1] = task12;
+            taskCopies[(int)task13.type - 1] = task13;
+            taskCopies[(int)task14.type - 1] = task14;
         }
 
         void PopulatePlayerCharaterMasterList()
@@ -585,7 +626,10 @@ namespace Tasks
 
         string GetTaskDescription(int taskType)
         {
-            switch((TaskType)taskType)
+            // can be simplified to this I think
+            //return taskCopies[taskType - 1].GetDescription();
+
+            switch ((TaskType)taskType)
             {
                 case TaskType.AirKills:
                     return AirKills.description;
@@ -594,7 +638,7 @@ namespace Tasks
                     return DamageMultipleTargets.description;
 
                 case TaskType.DamageInTime:
-                    return DealDamageInTime.description;
+                    return taskCopies[(int)TaskType.DamageInTime - 1].GetDescription();
 
                 case TaskType.StayInAir:
                     return StayInAir.description;

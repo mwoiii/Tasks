@@ -9,7 +9,7 @@ namespace Tasks
     class OpenChests : Task
     {
         public static new string description { get; } = "First to open 5 chests wins (multishops count too)";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_OPEN_CHESTS_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_OPEN_CHESTS_REWARD_ID"; // Delete me from XML too
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
@@ -17,8 +17,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_OPEN_CHESTS_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.OpenChests;
+        */
+        public override TaskType type { get; } = TaskType.OpenChests;
         protected override string name { get; } = "Open 5 Chests";
 
         int[] chestsOpened;

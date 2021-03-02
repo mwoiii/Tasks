@@ -11,7 +11,7 @@ namespace Tasks
     {
 
         public static new string description { get; } = "Deal 500 damage in 5 seconds";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_IN_TIME_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_IN_TIME_REWARD_ID"; // Delete me from XML too
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
@@ -19,8 +19,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_DAMAGE_IN_TIME_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.DamageInTime;
+        */
+        public override TaskType type { get; } = TaskType.DamageInTime;
         protected override string name { get; } = "Damage In Time";
 
         float damageToDeal = 500;
@@ -35,6 +35,7 @@ namespace Tasks
             base.SetHooks(numPlayers);
 
             GlobalEventManager.onServerDamageDealt += OnDamage;
+            damageToDeal = Run.instance.difficultyCoefficient * damageToDeal;
 
             if (currentDamage is null || currentDamage.Length != numPlayers)
             {
@@ -50,6 +51,11 @@ namespace Tasks
             Reset();
 
             base.Unhook();
+        }
+
+        public override string GetDescription()
+        {
+            return $"Deal {damageToDeal} damage in 5 seconds";
         }
 
         public void OnDamage(DamageReport report)

@@ -9,7 +9,7 @@ namespace Tasks
     class UsePrinters : Task
     {
         public static new string description { get; } = "Use 2 Different 3D Printers";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_REWARD_ID"; // Delete me from XML too
         // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
@@ -18,8 +18,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_USE_PRINTERS_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.UsePrinters;
+        */
+        public override TaskType type { get; } = TaskType.UsePrinters;
         protected override string name { get; } = "Use Printers";
 
         HashSet<GameObject>[] printersUsed;

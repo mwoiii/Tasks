@@ -10,7 +10,7 @@ namespace Tasks
     class FarthestAway : Task
     {
         public static new string description { get; } = "Farthest away in 20s wins";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_REWARD_ID"; // Delete me from XML too
         // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
@@ -19,8 +19,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.FarthestAway;
+        */
+        public override TaskType type { get; } = TaskType.FarthestAway;
         protected override string name { get; } = "Farthest From Spawn";
 
         Vector3[] startPositions;

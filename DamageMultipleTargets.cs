@@ -9,7 +9,7 @@ namespace Tasks
     class DamageMultipleTargets : Task
     {
         public static new string description { get; } = "Have 4 enemies damage by you alive at once";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_MULTIPLE_ACHIEVEMENT_ID"; // delete this from XML if there
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_DAMAGE_MULTIPLE_REWARD_ID"; // Delete me from XML too
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
@@ -17,8 +17,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_DAMAGE_MULTIPLE_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.DamageMultiple;
+        */
+        public override TaskType type { get; } = TaskType.DamageMultiple;
         protected override string name { get; } = "Damage Multiple";
 
         int numToHit = 4;

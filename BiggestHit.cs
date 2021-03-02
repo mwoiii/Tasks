@@ -8,7 +8,7 @@ namespace Tasks
     class BiggestHit : Task
     {
         public static new string description { get; } = "Biggest hit wins";
-
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_REWARD_ID"; // Delete me from XML too
         // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
@@ -17,8 +17,8 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_BIGGEST_HIT_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
-        protected override TaskType type { get; } = TaskType.BiggestHit;
+        */
+        public override TaskType type { get; } = TaskType.BiggestHit;
         protected override string name { get; } = "Biggest Hit";
 
         // by it's nature, this task gets triggered at the end.

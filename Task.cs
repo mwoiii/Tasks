@@ -17,13 +17,14 @@ namespace Tasks
     // Adds Task : ModdedUnlockableAndAchievements
     class Task : ModdedUnlockableAndAchievement<CustomSpriteProvider>
     */
-    class Task : ModdedUnlockableAndAchievement<VanillaSpriteProvider>
+    class Task // : ModdedUnlockableAndAchievement<VanillaSpriteProvider>
     {
         static string myName = "SOLRUN_";
         static string myMod = "TASKS_";
         protected static string thisClass = "BASE_TASK_";
         public static string description { get; } = "Base description";
 
+        /*
         public override string AchievementIdentifier { get; } = myName + myMod + thisClass + "ACHIEVEMENT_ID";
         public override string UnlockableIdentifier { get; } = myName + myMod + thisClass + "REWARD_ID";
         // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
@@ -32,35 +33,46 @@ namespace Tasks
         public override string AchievementDescToken { get; } = myName + myMod + thisClass + "ACHIEVEMENT_DESC"; // plain English
         public override string UnlockableNameToken { get; } = myName + myMod + thisClass + "UNLOCKABLE_NAME"; // plain English
         protected override VanillaSpriteProvider SpriteProvider { get; } = new VanillaSpriteProvider("VANILLA PATH");
+        */
 
         //protected virtual int _id { get;} = 0;
-        protected virtual TaskType type { get; } = TaskType.Base;
+        public virtual TaskType type { get; } = TaskType.Base;
         protected virtual string name { get; } = "Base Task";
         public static event Action<TaskType, int> OnCompletion;
 
-        UserProfile profile;
-        protected UserAchievementManager ownerCached;
+        //UserProfile profile;
+        //protected UserAchievementManager ownerCached;
         protected int totalNumberPlayers;
+
+        public Task()
+        {
+            OnInstall();
+        }
 
         virtual protected void SetupName()
         {
-            Language.currentLanguage.SetStringByToken(AchievementNameToken, name);
+            //Language.currentLanguage.SetStringByToken(AchievementNameToken, name);
         }
 
-        override public void OnInstall()
+        public virtual string GetDescription()
         {
-            base.OnInstall();
-            SetupName();
+            return description;
+        }
+
+        virtual public void OnInstall()
+        {
+            //base.OnInstall();
+            //SetupName();
             // cache the profile
             // need it for showing the popup, revoking achievements
-            profile = this.owner.userProfile;
-            ownerCached = this.owner;
+            //profile = this.owner.userProfile;
+            //ownerCached = this.owner;
 
             // Should I call this here?
             // The problem is if you start the game with a task achievement completed in your log, it won't track anymore (bc achievements are one-off things)
             // So if you start the game, will even this part get run?
             // It doesn't help
-            RemoveAchievement();
+            //RemoveAchievement();
 
             // Not sure if this is the right event
             // Other options
@@ -77,7 +89,7 @@ namespace Tasks
             TasksPlugin.OnPopup += this.ShowPopup;
         }
 
-        override public void OnUninstall()
+        virtual public void OnUninstall()
         {
             // I'm not sure when it's appropriate to call this method
             // I don't think I ever need to
@@ -99,7 +111,7 @@ namespace Tasks
             // but I don't do that because
             // setting granted to true causes the achievement to be deleted
             // which I don't want bc I want to reactivate and reuse them
-            base.OnUninstall();
+            //base.OnUninstall();
         }
 
         virtual protected void CompleteTask(int playerNum)
@@ -124,7 +136,7 @@ namespace Tasks
                 // how to make this run on the client?
                 //CharacterMaster m;
                 //TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<UserProfile>().AddAchievement(this.achievementDef.identifier, false);
-                profile.AddAchievement(this.achievementDef.identifier, false);
+                //profile.AddAchievement(this.achievementDef.identifier, false);
             }
         }
 
@@ -138,6 +150,7 @@ namespace Tasks
 
         void RemoveAchievement()
         {
+            /*
             if (profile != null)
             {
                 if (profile.HasAchievement(AchievementIdentifier))
@@ -146,6 +159,7 @@ namespace Tasks
                 }
                 profile.RevokeUnlockable(UnlockableCatalog.GetUnlockableDef(UnlockableIdentifier));
             }
+            */
         }
 
         void Activate(int id, int numPlayers)

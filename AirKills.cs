@@ -14,6 +14,7 @@ namespace Tasks
         //protected static new string thisClass = "AIR_KILLS_";
         //  /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TEMP_ACHIEVEMENTS_KILL_BEETLE_ACHIEVEMENT_NAME /Logbook/LOGBOOK_CATEGORY_ACHIEVEMENTS/SOLRUN_TASKS_BASE_TASK_ACHIEVEMENT_NAME
 
+        /*
         public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_ID"; // delete this from XML if there 
         public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_AIRKILLS_REWARD_ID"; // Delete me from XML too
         // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
@@ -22,9 +23,9 @@ namespace Tasks
         public override string AchievementNameToken { get; } = "SOLRUN_TASKS_AIRKILLS_ACHIEVEMENT_NAME"; // Fine to have in the XML
         public override string AchievementDescToken { get; } = description; // plain English
         public override string UnlockableNameToken { get; } = ""; // plain English
-
+        */
         //protected override int _id { get; } = 1;
-        protected override TaskType type { get; } = TaskType.AirKills;
+        public override TaskType type { get; } = TaskType.AirKills;
         protected override string name { get; } = "Air Kills";
 
         int[] kills;
