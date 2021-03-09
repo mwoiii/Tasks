@@ -61,6 +61,7 @@ namespace Tasks
         int[] stageStartTasks;
         int[] teleStartTasks;
         Task[] taskCopies;
+        bool telePlaced = false;
 
         // Client
         TaskInfo[] currentTasks;
@@ -130,10 +131,9 @@ namespace Tasks
             }
             if (Input.GetKeyDown(KeyCode.F2))
             {
-                for (int i = 1; i < totalNumTasks; i++)
-                {
-                    CreateNotification(i);
-                }
+                TeleporterInteraction.instance.shouldAttemptToSpawnGoldshoresPortal = true;
+                TeleporterInteraction.instance.shouldAttemptToSpawnMSPortal = true;
+                TeleporterInteraction.instance.shouldAttemptToSpawnShopPortal = true;
             }
             if (Input.GetKeyDown(KeyCode.F3))
             {
@@ -331,6 +331,31 @@ namespace Tasks
                 // interactor is the player
                 //interactor.GetComponent<CharacterBody>();
                 string interactableType = interactable.GetType().ToString();
+                /*
+                string componentsString = "";
+                foreach (var c in go.GetComponents<Component>())
+                {
+                    componentsString += c.GetType().ToString() + " ";
+                }
+                Chat.AddMessage($"Interacted with {go.name} InterType: {interactableType} Components: {componentsString}");
+                */
+                // Newt Altar
+                // [Info   : Unity Log] Interacted with NewtStatue InterType: RoR2.PurchaseInteraction Components: UnityEngine.Transform RoR2.Highlight UnityEngine.Networking.NetworkIdentity RoR2.PurchaseInteraction RoR2.Hologram.HologramProjector RoR2.PortalStatueBehavior RoR2.UnlockableGranter 
+                // Tele
+                // [Info   : Unity Log] Interacted with Teleporter1(Clone) InterType: RoR2.TeleporterInteraction Components: UnityEngine.Transform UnityEngine.Networking.NetworkIdentity UnityEngine.Networking.NetworkTransform RoR2.Highlight RoR2.HoldoutZoneController RoR2.TeleporterInteraction RoR2.OutsideInteractableLocker RoR2.GenericDisplayNameProvider RoR2.CombatDirector RoR2.CombatDirector RoR2.SceneExitController RoR2.ModelLocator RoR2.CombatSquad RoR2.BossGroup RoR2.EntityStateMachine RoR2.NetworkStateMachine 
+                // blue portal
+                // [Info   : Unity Log] Interacted with PortalShop(Clone) InterType: RoR2.GenericInteraction Components: UnityEngine.Transform RoR2.ObjectScaleCurve UnityEngine.Networking.NetworkIdentity RoR2.GenericInteraction RoR2.SceneExitController RoR2.GenericDisplayNameProvider RoR2.ConvertPlayerMoneyToExperience 
+                // leave bazaar portal
+                // [Info   : Unity Log] Interacted with PortalShop InterType: RoR2.GenericInteraction Components: UnityEngine.Transform RoR2.ObjectScaleCurve UnityEngine.Networking.NetworkIdentity RoR2.GenericInteraction RoR2.SceneExitController RoR2.GenericDisplayNameProvider RoR2.ConvertPlayerMoneyToExperience 
+
+                // Tp start
+                // [Info   : Unity Log] Interacted with Teleporter1(Clone) InterType: RoR2.TeleporterInteraction Components: UnityEngine.Transform UnityEngine.Networking.NetworkIdentity UnityEngine.Networking.NetworkTransform RoR2.Highlight RoR2.HoldoutZoneController RoR2.TeleporterInteraction RoR2.OutsideInteractableLocker RoR2.GenericDisplayNameProvider RoR2.CombatDirector RoR2.CombatDirector RoR2.SceneExitController RoR2.ModelLocator RoR2.CombatSquad RoR2.BossGroup RoR2.EntityStateMachine RoR2.NetworkStateMachine 
+                // Tp leave
+                // [Info   : Unity Log] Interacted with Teleporter1(Clone) InterType: RoR2.TeleporterInteraction Components: UnityEngine.Transform UnityEngine.Networking.NetworkIdentity UnityEngine.Networking.NetworkTransform RoR2.Highlight RoR2.HoldoutZoneController RoR2.TeleporterInteraction RoR2.OutsideInteractableLocker RoR2.GenericDisplayNameProvider RoR2.CombatDirector RoR2.CombatDirector RoR2.SceneExitController RoR2.ModelLocator RoR2.CombatSquad RoR2.BossGroup RoR2.EntityStateMachine RoR2.NetworkStateMachine AkGameObj RoR2.HoldoutZoneController+FocusConvergenceController 
+
+                // Tp doesn't have RoR2.ConvertPlayerMoneyToExperience
+                // unless it's a child?
+
                 if (go?.GetComponent<ShopTerminalBehavior>())
                 {
                     // Multishops AND 3D printers
@@ -374,11 +399,19 @@ namespace Tasks
                 if (go?.GetComponent<TeleporterInteraction>())
                 {
                     // this might be true for interacting with the end tp to switch to loop mode
-                    Chat.AddMessage("Interacted with TP");
+                    Chat.AddMessage("Interacted with TP. InterType: " + interactableType + " name: " + go.name);
                 }
+                else if(go?.GetComponent<SceneExitController>())
+                {
+                    // not a tp so probably some kind of tp like blue or gold
+                    Chat.AddMessage($"Interacted with a SceneExitController {go.name}");
+                    StageEnd();
+                }
+                
             };
             TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
             {
+                
                 // Once the tele event starts
                 // triggers on the client
                 // So you interact, then wait a few secs, then this triggers, then the boss spawns
@@ -403,12 +436,22 @@ namespace Tasks
                     StageEnd();
                 }
             };
+
             BossGroup.onBossGroupDefeatedServer += (BossGroup group) =>
             {
                 // this works. Timer too
                 Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
             };
 
+            On.RoR2.Run.OnServerTeleporterPlaced += (orig, self, director, teleporter) =>
+            {
+                orig(self, director, teleporter);
+                Chat.AddMessage("Placed the TP"); // shouldn't run on stages without a tp
+                // this should run before HUD.Awake
+                // Have to wait til HUD.Awake so stuff isn't null
+                telePlaced = true;
+                // telePlaced = false at end of stage to reset for the next stage
+            };
 
             // controls starting tasks
             On.RoR2.UI.HUD.Awake += (orig, self) =>
@@ -417,14 +460,19 @@ namespace Tasks
                 // This also gets called at the start of each stage. 
                 // GenerateTasks waits 3 seconds and that seems to do it
                 orig(self);
+                Chat.AddMessage("UI Awake");
                 hud = self;
                 panel = self.objectivePanelController;
+                // check if there is a tele
+                // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
+                if (telePlaced)
+                {
+                    int numberOfStageTasks = 5;
+                    tasksUIObjects = new GameObject[numberOfStageTasks];
 
-                int numberOfStageTasks = 5;
-                tasksUIObjects = new GameObject[numberOfStageTasks];
-
-                if (NetworkServer.active)
-                    GenerateTasks(numberOfStageTasks);
+                    if (NetworkServer.active)
+                        GenerateTasks(numberOfStageTasks);
+                }
             };
         }
 
@@ -592,8 +640,13 @@ namespace Tasks
             // Do this before ending all tasks
             // some tasks are only finished when the stage ends (deal the most damage, etc)
             // So they need to give their reward after temp items are removed in case they give temp items
-            RemoveTempItems();
-            EndAllTasks();
+            // if there was no tele, there were no tasks
+            if (telePlaced)
+            {
+                RemoveTempItems();
+                EndAllTasks();
+            }
+            telePlaced = false;
         }
 
         int[] GetRandomUniqueTasks(int count)
@@ -919,6 +972,7 @@ namespace Tasks
                 instance.preonEventEqCache[i] = playerCharacterMasters[i].inventory.currentEquipmentIndex;
                 playerCharacterMasters[i].inventory.SetEquipmentIndex(EquipmentIndex.BFG);
                 //playerCharacterMasters[i].inventory.GiveItem(ItemIndex.AutoCastEquipment); // annoying while testing stuff
+                playerCharacterMasters[i].inventory.GiveItem(ItemIndex.Talisman); // soulbound catalyst. Kills reduce eq cd
                 playerCharacterMasters[i].inventory.GiveItem(ItemIndex.EquipmentMagazine, 5);
             }
 
@@ -930,6 +984,7 @@ namespace Tasks
             {
                 playerCharacterMasters[i].inventory.SetEquipmentIndex(instance.preonEventEqCache[i]);
                 //playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.AutoCastEquipment);
+                playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.Talisman);
                 playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.EquipmentMagazine, 5);
             }
         }
