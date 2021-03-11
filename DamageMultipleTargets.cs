@@ -26,6 +26,7 @@ namespace Tasks
         // using body might not work because multiple things have the same body 
         // so maybe I can't tell them apart? Like maybe I can't add 2 different beetles to the hash
         HashSet<GameObject>[] targets;
+        float[] progress;
 
         public override string GetDescription()
         {
@@ -43,6 +44,7 @@ namespace Tasks
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
 
             targets = new HashSet<GameObject>[numPlayers];
+            progress = new float[numPlayers];
             for (int i = 0; i < targets.Length; i++)
             {
                 targets[i] = new HashSet<GameObject>();
@@ -60,6 +62,15 @@ namespace Tasks
             base.Unhook();
         }
 
+        void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = (float)targets[i].Count / numToHit;
+            }
+            base.UpdateProgress(progress);
+        }
+
         public void OnDamage(DamageReport report)
         {
             if (report is null) return;
@@ -74,7 +85,8 @@ namespace Tasks
                 if (targets[playerNum].Contains(report.victim.gameObject))
                     return;
                 targets[playerNum].Add(report.victim.gameObject);
-                if(IsComplete(playerNum))
+                UpdateProgress();
+                if (IsComplete(playerNum))
                 {
                     Chat.AddMessage($"Player {playerNum} Completed DamageMultiple");
                     CompleteTask(playerNum);
@@ -99,6 +111,7 @@ namespace Tasks
             int playerNum = TasksPlugin.GetPlayerNumber(report.attackerMaster);
 
             targets[playerNum].Remove(report.victim.gameObject);
+            UpdateProgress();
         }
 
         void ResetKills()
@@ -109,6 +122,7 @@ namespace Tasks
             {
                 targets[i].Clear();
             }
+            UpdateProgress();
         }
     }
 }

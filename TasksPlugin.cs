@@ -47,6 +47,7 @@ namespace Tasks
         public IRpcAction<int> taskCompletionClient { get; set; }
         public IRpcAction<int> taskEndedClient { get; set; }
         public IRpcAction<TaskInfo> updateTaskClient { get; set; }
+        public IRpcAction<ProgressInfo> updateProgressClient { get; set; }
 
         
         static List<CharacterMaster> playerCharacterMasters;
@@ -66,6 +67,8 @@ namespace Tasks
         // Client
         TaskInfo[] currentTasks;
         GameObject[] tasksUIObjects;
+        RectTransform[] tasksUIRects;
+        RectTransform[] rivalTasksUIRects; // shows the leader or next nearest if you are the leader
 
         HUD hud;
         ObjectivePanelController panel;
@@ -86,6 +89,7 @@ namespace Tasks
             }
 
             Task.OnCompletion += TaskCompletion;
+            Task.OnUpdateProgress += UpdateTaskProgress;
 
             // How to make a new Task
             // Make the class
@@ -126,7 +130,7 @@ namespace Tasks
         {
             if (Input.GetKeyDown(KeyCode.F1))
             {
-                PickupIndex p = new PickupIndex(ItemIndex.Bear);
+                PickupIndex p = new PickupIndex(ItemIndex.BarrierOnKill);
                 PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
             }
             if (Input.GetKeyDown(KeyCode.F2))
@@ -276,32 +280,18 @@ namespace Tasks
 
                 UpdateTasksUI(taskInfo.index);
             });
+
+            updateProgressClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, ProgressInfo progressInfo) =>
+            {
+                bool playerLeading = progressInfo.GetMyProgress() > progressInfo.GetRivalProgress();
+
+                UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
+                UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
+            });
         }
 
         void SetGameHooks()
         {
-            // Removes my task achievements so they can be achieved again
-            On.RoR2.UserProfile.HasAchievement += (orig, self, param) =>
-            {
-                // This seems to work
-                // It clears tasks when you load the game
-                // Also when the task is activated
-                // And when the game ends (when the game writes stats I think)
-                // When you go to the logbook in the menu
-                // It does get called a few times more than is really needed, but that's probably not a big performance hit
-                // to revoke a task more often than is needed
-
-                // Bc the tasks are temporary achievements, I never really want you to 'have' them. 
-                // Achievements are a one-and-done thing. Having them implies they are over, but the tasks are reuseable
-                // if HasAchievement() returns true, the game basically ignores it. So I just never let it return true for my tasks
-                // It might have some problems in the future
-                if (param.Contains("SOLRUN"))
-                {
-                    //Chat.AddMessage($"Matched Solrun. Removing Achievement: {param}");
-                    self.RevokeAchievement(param);
-                }
-                return orig(self, param);
-            };
 
 
             // Used for tasks
@@ -469,6 +459,8 @@ namespace Tasks
                 {
                     int numberOfStageTasks = 5;
                     tasksUIObjects = new GameObject[numberOfStageTasks];
+                    tasksUIRects = new RectTransform[numberOfStageTasks];
+                    rivalTasksUIRects = new RectTransform[numberOfStageTasks];
 
                     if (NetworkServer.active)
                         GenerateTasks(numberOfStageTasks);
@@ -481,13 +473,13 @@ namespace Tasks
             if (tasksUIObjects[taskIndex] is null)
             {
                 tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
-
                 // rewards is totalNumTasks long
                 // taskIndex is like 9 at most.
                 int rewardIndex = currentTasks[taskIndex].taskType;
 
                 tasksUIObjects[taskIndex].SetActive(true);
-                if(itemIconPrefabCopy is null)
+
+                if (itemIconPrefabCopy is null)
                 {
                     itemIconPrefabCopy = FindObjectOfType<ItemInventoryDisplay>().itemIconPrefab;
                 }
@@ -507,6 +499,53 @@ namespace Tasks
             {
                 textMeshLabel.text = (text == "") ? currentTasks[taskIndex].description : text;
             }
+            
+            tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
+            rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
+            
+        }
+
+        RectTransform CreateTaskProgressBar(Transform parent)
+        {
+            GameObject proBar = new GameObject("ProBar");
+            RectTransform progress = proBar.AddComponent<RectTransform>();
+            progress.SetParent(parent, false);
+            progress.anchorMin = new Vector2(0, 0); // min and max snap the bar to the bottom of its parent
+            progress.anchorMax = new Vector2(0, 0);
+            progress.pivot = new Vector2(0, 0); // x needs to be 0, y doesn't matter?
+            progress.sizeDelta = new Vector2(0, 3); // x is the progress. 3 is the line thickness.
+
+
+            Image image = proBar.AddComponent<Image>();
+            image.color = new Color(97 / 255f, 171 / 255f, 50 / 255f); // healthbar green
+
+            return progress;
+        }
+
+        /// <summary>
+        /// The rect to update and the percent complete (from 0 to 1)
+        /// </summary>
+        /// <param name="rect"></param>
+        /// <param name="percent01">Percent complete between 0 and 1</param>
+        void UpdateProgress(RectTransform rect, float percent01)
+        {
+            rect.sizeDelta = new Vector2(percent01 * 113, 3); // 113 just looks about right
+        }
+
+        void UpdateProgress(RectTransform rect, float percent01, bool playerLeading)
+        {
+            Image image = rect.GetComponent<Image>();
+            if (playerLeading)
+            {
+                image.color = new Color(234 / 255f, 229 / 255f, 135 / 255f); // barrier gold (the outline, the colour over the hp bar is a is see through so it's a little green)
+                rect.SetAsLastSibling(); // put on top
+            }
+            else
+            {
+                image.color = new Color(68 / 255f, 94 / 255f, 181 / 255f); // shield blue
+                rect.SetAsFirstSibling(); // put below
+            }
+            UpdateProgress(rect, percent01);
         }
 
         void RemoveObjectivePanel(int taskType)
@@ -686,56 +725,7 @@ namespace Tasks
 
         string GetTaskDescription(int taskType)
         {
-            // can be simplified to this I think
             return taskCopies[taskType - 1].GetDescription();
-            /*
-            switch ((TaskType)taskType)
-            {
-                case TaskType.AirKills:
-                    return AirKills.description;
-
-                case TaskType.DamageMultiple:
-                    return DamageMultipleTargets.description;
-
-                case TaskType.DamageInTime:
-                    return taskCopies[(int)TaskType.DamageInTime - 1].GetDescription();
-
-                case TaskType.StayInAir:
-                    return StayInAir.description;
-
-                case TaskType.BiggestHit:
-                    return BiggestHit.description;
-
-                case TaskType.MostDistance:
-                    return MostDistance.description;
-
-                case TaskType.PreonEvent:
-                    return PreonEvent.description;
-
-                case TaskType.FarthestAway:
-                    return FarthestAway.description;
-
-                case TaskType.FailShrine:
-                    return FailShrine.description;
-
-                case TaskType.OpenChests:
-                    return OpenChests.description;
-
-                case TaskType.StartTele:
-                    return StartTeleporter.description;
-
-                case TaskType.UsePrinters:
-                    return UsePrinters.description;
-
-                case TaskType.OrderedSkills:
-                    return OrderedSkills.description;
-
-                case TaskType.BadSkill:
-                    return DontUseSkill.description;
-            }
-
-            return "";
-            */
         }
 
         void CreateNotification(int task)
@@ -875,6 +865,36 @@ namespace Tasks
             taskEndedClient.Invoke((int)taskType); // hope this sends to everyone
         }
 
+        void UpdateTaskProgress(TaskType taskType, float[] progress)
+        {
+            int taskIndex = 0;
+            for (int i = 0; i < stageStartTasks.Length; i++)
+            {
+                if(stageStartTasks[i] == (int)taskType)
+                {
+                    taskIndex = i;
+                    break;
+                }
+            }
+            // do a loop for tele tasks if I ever make those
+            for (int i = 0; i < totalNumPlayers; i++)
+            {
+                float myProgress = progress[i];
+                float rival = 0;
+                for (int j = 0; j < totalNumPlayers; j++)
+                {
+                    if (j == i)
+                        break;
+                    if(progress[j] > rival)
+                    {
+                        rival = progress[j];
+                    }
+                }
+                ProgressInfo p = new ProgressInfo(taskIndex, myProgress, rival);
+                updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
+            }
+        }
+
         void GiveReward(TaskType task, int playerNum)
         {
             if(rewards[(int)task].type == RewardType.Item)
@@ -882,12 +902,17 @@ namespace Tasks
                 playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
                 // I'm not sure what readOnlyInstanceList[0] is
                 // Are there more than one? GenericPickupController loops over all of them and runs OnPickup on all of them
-                NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
                
                 // show text in chat
                 PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
-                Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, 1);
+                //Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, 1);
 
+                //Chat.AddMessage("New pickup message");
+                // maybe this works?
+                // i think it uses your current num of that item, it doesn't care how many you get at once so you don't have to pass it in
+                typeof(GenericPickupController).InvokeMethod("SendPickupMessage", GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);// (CharacterMaster master, PickupIndex pickupIndex)
+                
                 // This might not be any different...
                 /*
                 Chat.AddMessage(new Chat.PlayerPickupChatMessage
@@ -903,10 +928,13 @@ namespace Tasks
             else if(rewards[(int)task].type == RewardType.TempItem)
             {
                 playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
-                NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
 
                 PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
-                Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, Convert.ToUInt32(rewards[(int)task].numItems));
+                //Chat.AddPickupMessage(GetPlayerCharacterMaster(playerNum).GetBody(), pickDef.nameToken, pickDef.baseColor, Convert.ToUInt32(rewards[(int)task].numItems));
+                
+                //Chat.AddMessage("New pickup message (temp)");
+                typeof(GenericPickupController).InvokeMethod("SendPickupMessage", GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
                 /*
                 Chat.AddMessage(new Chat.PlayerPickupChatMessage
                 {
@@ -986,6 +1014,48 @@ namespace Tasks
                 //playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.AutoCastEquipment);
                 playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.Talisman);
                 playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.EquipmentMagazine, 5);
+            }
+        }
+
+        public class ProgressInfo : MessageBase
+        {
+            public int taskIndex;
+            int myProgress;
+            int rivalProgress;
+
+            public ProgressInfo(int _taskIndex, float _myProgress, float _rivalProgress)
+            {
+                taskIndex = _taskIndex;
+                // can't serialize floats (or I don't know how)
+                // so just convert from 0.0->1.0 to 00 to 10
+                // Lose most decimal places, but didn't need them anyway
+                myProgress = (int)(_myProgress * 10);
+                rivalProgress = (int)(_rivalProgress * 10);
+            }
+
+            public float GetMyProgress()
+            {
+                // convert back to floats
+                return myProgress / 10f;
+            }
+
+            public float GetRivalProgress()
+            {
+                return rivalProgress / 10f;
+            }
+
+            public override void Serialize(NetworkWriter writer)
+            {
+                writer.Write(taskIndex);
+                writer.Write(myProgress);
+                writer.Write(rivalProgress);
+            }
+
+            public override void Deserialize(NetworkReader reader)
+            {
+                taskIndex = reader.ReadInt32();
+                myProgress = reader.ReadInt32();
+                rivalProgress = reader.ReadInt32();
             }
         }
 

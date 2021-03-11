@@ -26,6 +26,7 @@ namespace Tasks
 
         float[] timeInAir;
         float timeToStayInAir = 5;
+        float[] progress;
 
         public override string GetDescription()
         {
@@ -43,6 +44,7 @@ namespace Tasks
             if (timeInAir is null || timeInAir.Length != numPlayers)
             {
                 timeInAir = new float[numPlayers];
+                progress = new float[numPlayers];
             }
 
             if(motors is null || motors.Length != numPlayers)
@@ -84,6 +86,16 @@ namespace Tasks
                     Reset();
                 }
             }
+            UpdateProgress();
+        }
+
+        protected void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = timeInAir[i] / timeToStayInAir;
+            }
+            base.UpdateProgress(progress);
         }
 
         override protected bool IsComplete(int playerNum)

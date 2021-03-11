@@ -39,6 +39,7 @@ namespace Tasks
         public virtual TaskType type { get; } = TaskType.Base;
         protected virtual string name { get; } = "Base Task";
         public static event Action<TaskType, int> OnCompletion;
+        public static event Action<TaskType, float[]> OnUpdateProgress;
 
         //UserProfile profile;
         //protected UserAchievementManager ownerCached;
@@ -112,6 +113,11 @@ namespace Tasks
             // setting granted to true causes the achievement to be deleted
             // which I don't want bc I want to reactivate and reuse them
             //base.OnUninstall();
+        }
+
+        virtual protected void UpdateProgress(float[] progress)
+        {
+            OnUpdateProgress?.Invoke(type, progress);
         }
 
         virtual protected void CompleteTask(int playerNum)

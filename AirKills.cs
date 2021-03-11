@@ -30,6 +30,7 @@ namespace Tasks
 
         int[] kills;
         int killsNeeded = 3;
+        float[] progress;
 
         //delegate void killDelegate(DamageReport damageReport);
 
@@ -48,6 +49,7 @@ namespace Tasks
 
             base.SetHooks(numPlayers);
             kills = new int[numPlayers];
+            progress = new float[numPlayers];
 
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
           
@@ -129,6 +131,7 @@ namespace Tasks
             if(!damageReport.attackerMaster.GetBody().characterMotor.isGrounded)
             {
                 kills[playerNum]++;
+                UpdateProgress();
                 if(IsComplete(playerNum))
                 {
                     Chat.AddMessage($"Player {playerNum} Completed AirKills");
@@ -139,9 +142,19 @@ namespace Tasks
             }
         }
 
+        void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = (float)kills[i] / killsNeeded;
+            }
+            base.UpdateProgress(progress);
+        }
+
         void PlayerHitGround(int playerNum)
         {
             //Chat.AddMessage($"Player {playerNum} landed");
+            UpdateProgress();
             kills[playerNum] = 0;
         }
 
@@ -153,6 +166,7 @@ namespace Tasks
             {
                 kills[i] = 0;
             }
+            UpdateProgress();
         }
     }
 }

@@ -108,6 +108,14 @@ namespace Tasks
                 // if preon
                 //Chat.AddMessage("Preon Kill");
                 kills[playerNum]++;
+                // update all clients about leaderboards
+                // data = kills
+                //OnUpdate(type, data);
+                // would a client be able to tell "I'm player 1 and player 1 is winning, therefore, I'm winning"
+                // or would they jsut know player 1 is winning and not know what their player num is?
+                // should I update every time someone gets a kill? Every 1 sec? Every 5 kills? Every kill, but not more often than every second?
+                // But I don't want to send info on the first kill, then miss the 2nd and 3rd kill that happened 0.1s later. 
+                // Would rather skip the first kill and report after the 3rd. 
             }
         }
 
