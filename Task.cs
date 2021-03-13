@@ -1,9 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using R2API;
 using R2API.Utils;
 using RoR2;
+using UnityEngine;
 
 namespace Tasks
 {
@@ -44,6 +46,7 @@ namespace Tasks
         //UserProfile profile;
         //protected UserAchievementManager ownerCached;
         protected int totalNumberPlayers;
+        protected float[] progress;
 
         public Task()
         {
@@ -120,6 +123,22 @@ namespace Tasks
             OnUpdateProgress?.Invoke(type, progress);
         }
 
+        protected void ResetProgress()
+        {
+            TasksPlugin.instance.StartCoroutine(ResetProgressInTime());
+        }
+
+        IEnumerator ResetProgressInTime()
+        {
+            // you get 3 secs of a full bar
+            yield return new WaitForSeconds(4);
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = 0;
+            }
+            OnUpdateProgress?.Invoke(type, progress);
+        }
+
         virtual protected void CompleteTask(int playerNum)
         {
             //ShowPopup();
@@ -184,6 +203,7 @@ namespace Tasks
                 // so doing it before you activate again works
                 RemoveAchievement();
                 totalNumberPlayers = numPlayers;
+                progress = new float[numPlayers];
                 SetHooks(numPlayers);
             }
         }

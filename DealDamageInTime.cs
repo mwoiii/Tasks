@@ -28,6 +28,10 @@ namespace Tasks
 
         float[] currentDamage;
 
+        // used for the progress bar. So the bar doesn't empty after the task is over
+        // I want to keep the bar full for a few sec
+        bool active = false;    
+
         public override string GetDescription()
         {
             // N0 turns it into a number with 0 decimal places i.e 5672.35 -> 5,672
@@ -47,6 +51,7 @@ namespace Tasks
             {
                 currentDamage = new float[numPlayers];
             }
+            active = true;
             Reset();
         }
 
@@ -57,6 +62,15 @@ namespace Tasks
             Reset();
 
             base.Unhook();
+        }
+
+        void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = currentDamage[i] / damageToDeal;
+            }
+            base.UpdateProgress(progress);
         }
 
         public void OnDamage(DamageReport report)
@@ -73,6 +87,7 @@ namespace Tasks
             // I guess it doesn't matter if you use fall damage to complete this
             // I wonder if it counts overkill?
             currentDamage[playerNum] += report.damageDealt;
+            UpdateProgress();
 
             // This class isn't a monobehaviour so it can't start its own coroutines
             // So this is a workaround. 
@@ -81,6 +96,7 @@ namespace Tasks
             {
                 Chat.AddMessage($"Player {playerNum} Completed DamageInTime");
 
+                active = false;
                 CompleteTask(playerNum);
                 Reset();
             }
@@ -95,6 +111,8 @@ namespace Tasks
         {
             yield return new WaitForSeconds(timeLimit);
             currentDamage[playerNum] = Mathf.Max(0, currentDamage[playerNum] - damage);
+            if(active)
+                UpdateProgress();
         }
 
         void Reset()
@@ -105,6 +123,7 @@ namespace Tasks
             {
                 currentDamage[i] = 0;
             }
+            ResetProgress();
         }
     }
 }

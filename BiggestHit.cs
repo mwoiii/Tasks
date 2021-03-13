@@ -80,6 +80,33 @@ namespace Tasks
             base.Unhook();
         }
 
+        protected void UpdateProgress()
+        {
+            float bigHit = 0;
+            for (int i = 0; i < biggestHit.Length; i++)
+            {
+                if (biggestHit[i] > bigHit)
+                {
+                    bigHit = biggestHit[i];
+                }
+            }
+            if (bigHit > 0)
+            {
+                for (int i = 0; i < progress.Length; i++)
+                {
+                    progress[i] = biggestHit[i] / bigHit;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < progress.Length; i++)
+                {
+                    progress[i] = 0; // shouldn't ever need this
+                }
+            }
+            base.UpdateProgress(progress);
+        }
+
         public void OnDamage(DamageReport report)
         {
             if (report is null) return;
@@ -94,6 +121,7 @@ namespace Tasks
             {
                 Chat.AddMessage($"Set new big hit for player {playerNum}. {biggestHit[playerNum]} -> {damage}");
                 biggestHit[playerNum] = damage;
+                UpdateProgress();
             }
         }
 
@@ -123,7 +151,7 @@ namespace Tasks
             {
                 biggestHit[i] = 0;
             }
-
+            ResetProgress();
         }
     }
 }

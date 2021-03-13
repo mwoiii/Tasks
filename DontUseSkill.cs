@@ -66,6 +66,7 @@ namespace Tasks
                 {
                     if(!playerFailed[i])
                     {
+                        UpdateProgressMultiWinner();
                         CompleteTask(i);
                     }
                 }
@@ -78,6 +79,28 @@ namespace Tasks
             base.Unhook();
         }
 
+        void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                // if you've failed, your bar is 0
+                // if you haven't, bar shows how many people have failed.
+                // when it fills up, that means you won
+                progress[i] = playerFailed[i]?0:(numPlayersFailed/(totalNumberPlayers-1));
+            }
+            base.UpdateProgress(progress);
+        }
+
+        void UpdateProgressMultiWinner()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                // full bar if you won
+                progress[i] = playerFailed[i] ? 0 : 1;
+            }
+            base.UpdateProgress(progress);
+        }
+
         void AbilityUsed(int playerNum, SkillSlot slot)
         {
             if(slot == badSkill)
@@ -87,8 +110,9 @@ namespace Tasks
                 Chat.AddMessage($"Player {playerNum} failed BadSkill");
                 playerFailed[playerNum] = true;
                 numPlayersFailed++;
+                UpdateProgress();
                 // have all but one player failed?
-                if(numPlayersFailed >= totalNumberPlayers-1)
+                if (numPlayersFailed >= totalNumberPlayers-1)
                 {
                     for (int i = 0; i < playerFailed.Length; i++)
                     {
@@ -96,6 +120,7 @@ namespace Tasks
                         if(!playerFailed[i])
                         {
                             CompleteTask(i);
+                            
                             return;
                         }
                     }
@@ -111,6 +136,7 @@ namespace Tasks
             {
                 playerFailed[i] = false;
             }
+            ResetProgress();
         }
     }
 }

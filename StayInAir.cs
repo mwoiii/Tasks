@@ -26,7 +26,6 @@ namespace Tasks
 
         float[] timeInAir;
         float timeToStayInAir = 5;
-        float[] progress;
 
         public override string GetDescription()
         {
@@ -44,7 +43,10 @@ namespace Tasks
             if (timeInAir is null || timeInAir.Length != numPlayers)
             {
                 timeInAir = new float[numPlayers];
-                progress = new float[numPlayers];
+                for (int i = 0; i < timeInAir.Length; i++)
+                {
+                    timeInAir[i] = 0;
+                }
             }
 
             if(motors is null || motors.Length != numPlayers)
@@ -73,8 +75,19 @@ namespace Tasks
             base.Unhook();
         }
 
+        protected void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = timeInAir[i] / timeToStayInAir;
+            }
+            base.UpdateProgress(progress);
+        }
+
         private void AirborneFixedUpdate()
         {
+            UpdateProgress(); // never gets to 1.0
+
             // does this break when one player dies?
             for (int i = 0; i < timeInAir.Length; i++)
             {
@@ -86,16 +99,6 @@ namespace Tasks
                     Reset();
                 }
             }
-            UpdateProgress();
-        }
-
-        protected void UpdateProgress()
-        {
-            for (int i = 0; i < progress.Length; i++)
-            {
-                progress[i] = timeInAir[i] / timeToStayInAir;
-            }
-            base.UpdateProgress(progress);
         }
 
         override protected bool IsComplete(int playerNum)
@@ -105,12 +108,14 @@ namespace Tasks
 
         void Reset()
         {
+            UpdateProgress(); // update before you reset so the bar is full for a bit
             if (timeInAir is null)
                 return;
             for (int i = 0; i < timeInAir.Length; i++)
             {
                 timeInAir[i] = 0;
             }
+            ResetProgress();
         }
 
         void SetupBodies()

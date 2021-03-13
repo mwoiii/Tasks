@@ -91,29 +91,6 @@ namespace Tasks
             Task.OnCompletion += TaskCompletion;
             Task.OnUpdateProgress += UpdateTaskProgress;
 
-            // How to make a new Task
-            // Make the class
-            // Add the UnlockablesAPI.AddUnlockable<>(true)
-            // Update the TaskType enum in Task.cs (and the field in the new task class)
-            // Update the switch in GetTaskDescription (and the description field in the new task class)
-            // change the achievement IDs
-            /*
-            UnlockablesAPI.AddUnlockable<AirKills>(true);
-            UnlockablesAPI.AddUnlockable<DamageMultipleTargets>(true);
-            UnlockablesAPI.AddUnlockable<DealDamageInTime>(true);
-            UnlockablesAPI.AddUnlockable<StayInAir>(true);
-            UnlockablesAPI.AddUnlockable<BiggestHit>(true);
-            UnlockablesAPI.AddUnlockable<MostDistance>(true);
-            UnlockablesAPI.AddUnlockable<PreonEvent>(true);
-            UnlockablesAPI.AddUnlockable<FarthestAway>(true);
-            UnlockablesAPI.AddUnlockable<FailShrine>(true);
-            UnlockablesAPI.AddUnlockable<OpenChests>(true);
-            UnlockablesAPI.AddUnlockable<StartTeleporter>(true);
-            UnlockablesAPI.AddUnlockable<UsePrinters>(true);
-            UnlockablesAPI.AddUnlockable<OrderedSkills>(true);
-            UnlockablesAPI.AddUnlockable<DontUseSkill>(true);
-            */
-
             Run.onRunStartGlobal += GameSetup;
 
             SetupNetworking();
@@ -189,6 +166,13 @@ namespace Tasks
 
         void TaskSetup()
         {
+            // How to make a new task
+            // make the class
+            // increment the size of the array
+            // Create a new object, add it to the array
+            // add a new type to the TaskType enum in Task.cs
+            // update the type in the class you made
+
             Chat.AddMessage("Creating Task Objects");
             taskCopies = new Task[14];
 
@@ -228,7 +212,7 @@ namespace Tasks
         {
             for (int i = 0; i < CharacterMaster.readOnlyInstancesList.Count; i++)
             {
-                Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
+                //Chat.AddMessage($"Name: {CharacterMaster.readOnlyInstancesList[i].name} NetID: {CharacterMaster.readOnlyInstancesList[i].netId} LocalPlayer: {CharacterMaster.readOnlyInstancesList[i].isLocalPlayer}");
                 if (CharacterMaster.readOnlyInstancesList[i].playerCharacterMasterController != null)
                 {
                     //characterMasters
@@ -254,7 +238,7 @@ namespace Tasks
             {
                 // code that runs on the client
                 // user specifies which user I believe so I don't have to check
-                Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
+                //Chat.AddMessage($"Trying to make the popup on the client. User: {user} Task: {task}");
                 CreateNotification(task);
                 OnPopup?.Invoke(task);
                 RemoveObjectivePanel(task);
@@ -262,14 +246,14 @@ namespace Tasks
 
             taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
             {
-                Chat.AddMessage($"Task {task} ended. Removing UI");
+                //Chat.AddMessage($"Task {task} ended. Removing UI");
                 // task ended
                 RemoveObjectivePanel(task);
             });
 
             updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
             {
-                Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
+                //Chat.AddMessage($"UpdateTaskClient: {taskInfo}");
                 if (currentTasks is null || currentTasks.Length != taskInfo.total)
                 {
                     currentTasks = new TaskInfo[taskInfo.total];
@@ -292,7 +276,6 @@ namespace Tasks
 
         void SetGameHooks()
         {
-
 
             // Used for tasks
             On.RoR2.CharacterBody.OnSkillActivated += (orig, self, param) =>
@@ -321,6 +304,8 @@ namespace Tasks
                 // interactor is the player
                 //interactor.GetComponent<CharacterBody>();
                 string interactableType = interactable.GetType().ToString();
+
+                // trying to learn about drones
                 /*
                 string componentsString = "";
                 foreach (var c in go.GetComponents<Component>())
@@ -436,7 +421,7 @@ namespace Tasks
             On.RoR2.Run.OnServerTeleporterPlaced += (orig, self, director, teleporter) =>
             {
                 orig(self, director, teleporter);
-                Chat.AddMessage("Placed the TP"); // shouldn't run on stages without a tp
+                //Chat.AddMessage("Placed the TP"); // shouldn't run on stages without a tp
                 // this should run before HUD.Awake
                 // Have to wait til HUD.Awake so stuff isn't null
                 telePlaced = true;
@@ -450,7 +435,7 @@ namespace Tasks
                 // This also gets called at the start of each stage. 
                 // GenerateTasks waits 3 seconds and that seems to do it
                 orig(self);
-                Chat.AddMessage("UI Awake");
+                //Chat.AddMessage("UI Awake");
                 hud = self;
                 panel = self.objectivePanelController;
                 // check if there is a tele
@@ -534,16 +519,28 @@ namespace Tasks
 
         void UpdateProgress(RectTransform rect, float percent01, bool playerLeading)
         {
+            // this variant is specifically for the rival rect to change the colour and layering
             Image image = rect.GetComponent<Image>();
+            // what happens when players are tied? Both have 3/5 kills.
+            // playerLeading will be false
+            // so will make the bar blue and put it below so you probably can't see it
+            // I could do percent01 * 1.00001 // +=0.001
+            // 3/5 * 113 = 67.8
+            // 3/5 = 0.6 + 0.01 * 113 = 68.9
             if (playerLeading)
             {
                 image.color = new Color(234 / 255f, 229 / 255f, 135 / 255f); // barrier gold (the outline, the colour over the hp bar is a is see through so it's a little green)
                 rect.SetAsLastSibling(); // put on top
+                percent01 = Math.Max(0, percent01 - 0.02f); // might help with visuals when nearly tied
             }
             else
             {
                 image.color = new Color(68 / 255f, 94 / 255f, 181 / 255f); // shield blue
                 rect.SetAsFirstSibling(); // put below
+                if (percent01 > 0)
+                {
+                    percent01 = Mathf.Min(1, percent01 + 0.02f); // should help visuals when exactly tied
+                }
             }
             UpdateProgress(rect, percent01);
         }
@@ -576,11 +573,6 @@ namespace Tasks
                         if(icon)
                             icon.image.color = Color.grey;
                     }
-                    
-                    // should I just destroy them? Doesn't seem to help
-                    // They might get removed twice. Once if you complete them and then again at the end
-                    // destroying them doesn't make them null so it's hard to check for
-                    //Destroy(tasksUIObjects[i]);
                 }
             }
         }
@@ -654,6 +646,20 @@ namespace Tasks
             }
         }
 
+        void StageEnd()
+        {
+            // Do this before ending all tasks
+            // some tasks are only finished when the stage ends (deal the most damage, etc)
+            // So they need to give their reward after temp items are removed in case they give temp items
+            // if there was no tele, there were no tasks
+            if (telePlaced)
+            {
+                RemoveTempItems();
+                EndAllTasks();
+            }
+            telePlaced = false;
+        }
+
         void EndAllTasks()
         {
             if (stageStartTasks != null)
@@ -672,20 +678,6 @@ namespace Tasks
                     RemoveObjectivePanel(teleStartTasks[i]);
                 }
             }
-        }
-
-        void StageEnd()
-        {
-            // Do this before ending all tasks
-            // some tasks are only finished when the stage ends (deal the most damage, etc)
-            // So they need to give their reward after temp items are removed in case they give temp items
-            // if there was no tele, there were no tasks
-            if (telePlaced)
-            {
-                RemoveTempItems();
-                EndAllTasks();
-            }
-            telePlaced = false;
         }
 
         int[] GetRandomUniqueTasks(int count)
@@ -762,76 +754,6 @@ namespace Tasks
                     }
                   
                     break;
-                }
-            }
-        }
-        void NotificationTest()
-        {
-            Chat.AddMessage("Trying to make a notification");
-            Notification n = gameObject.AddComponent<Notification>();
-            n.enabled = false;
-            n.GetDescription = () => "1920/2, 1080/2";
-            n.GetTitle = () => "Title: Middle";
-            //n.SetPosition(new Vector3(5f, 1f, 0));
-            //n.GenericNotification.GetComponent<RectTransform>().SetParent(NotificationQueue.readOnlyInstancesList[0].GetComponent<RectTransform>(), false);
-            //n.Parent = NotificationQueue.readOnlyInstancesList[0].transform;
-            n.enabled = true;
-
-            // Bottom middle of the notification is the center of the screen
-            // Text is left aligned to the box so the text isn't in the center
-            n.GenericNotification.transform.position = new Vector3(1920f / 2, 1080f / 2, 0);
-            //CameraRigController.readOnlyInstancesList[0].hud.objectivePanelController.objectiveTrackerContainer
-
-            //TestNotifications();
-
-            //Chat.AddMessage("Picking up some items");
-            PickupIndex p = new PickupIndex(ItemIndex.Hoof);
-            //PickupIndex p2 = PickupCatalog.FindPickupIndex(ItemIndex.Hoof.ToString());
-            if (p != null)
-            {
-                //Chat.AddMessage("P");
-                // This works
-                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(0), p);
-                //Chat.AddMessage($"Positions: {NotificationQueue.readOnlyInstancesList[0].}")
-                // this.currentNotification.GetComponent<RectTransform>().SetParent(base.GetComponent<RectTransform>(), false);
-            }
-            /*
-            if (p2 != null)
-            {
-                //Chat.AddMessage("P2");
-                //NotificationQueue.readOnlyInstancesList[0].OnPickup(GetPlayerCharacterMaster(0), p2);
-            }
-            */
-        }
-        private void TestNotifications()
-        {
-            for (int i = 0; i < 11; i++)
-            {
-                for (int j = 0; j < 6; j++)
-                {
-                    int tempi = i;
-                    int tempj = j;
-
-                    GameObject go = new GameObject($"TestNotification {tempi}{tempj}");
-                    //go.transform.position = NotificationQueue.readOnlyInstancesList[0].transform.position + new Vector3(i / 3f, j / 3f, 0);
-                    Notification n = go.AddComponent<Notification>();
-                    n.enabled = false;
-                    n.GetDescription = () => $"Description: {tempi * 200}, {tempj * 200}";
-                    n.GetTitle = () => $"Title: {tempi}, {tempj}";
-                    //n.SetPosition(new Vector3(i/3f, j/3f, 0));
-                    //n.Parent = NotificationQueue.readOnlyInstancesList[0].transform;
-                    //n.Parent = go.transform;
-                    n.enabled = true;
-
-                    // Seems like these correspond to 1920x1080
-                    n.GenericNotification.transform.position = new Vector3(tempi * 200, tempj * 200, 0);
-                    //StartCoroutine(SetupParentLater(n, go.transform));
-                    //n.enabled = true;
-                    // I think awake gets called last
-                    // so there is no rootObject to move
-                    // I think I need to setn.Parent to the right pos
-                    // parent is Parent = RoR2Application.instance.mainCanvas.transform;
-                    // but awake resets it
                 }
             }
         }

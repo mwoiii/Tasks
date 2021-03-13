@@ -51,6 +51,15 @@ namespace Tasks
             base.Unhook();
         }
 
+        protected void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = (float)chestsOpened[i] / numToOpen;
+            }
+            base.UpdateProgress(progress);
+        }
+
         void ChestsOpened(Interactor interactor, IInteractable interactable, GameObject go)
         {
             // who interacted
@@ -74,12 +83,14 @@ namespace Tasks
                     chestsOpened[player]++;
                 }
             }
+            UpdateProgress();
 
-            if(IsComplete(player))
+            if (IsComplete(player))
             {
                 Chat.AddMessage($"Player {player} Completed OpenChests");
                 CompleteTask(player);
             }
+
         }
 
         protected override bool IsComplete(int playerNum)
@@ -95,6 +106,7 @@ namespace Tasks
             {
                 chestsOpened[i] = 0;
             }
+            ResetProgress();
         }
     }
 }

@@ -73,9 +73,53 @@ namespace Tasks
             base.Unhook();
         }
 
+        void UpdateProgress(int time)
+        {
+            // I could have this just be the timer. So it just fills up over the 20s
+            // or I could have that AND show the relative difference between the players.
+            // but then I would have to calculate distance every second. Which isn't that big of a deal
+            // I think the task would feel better with the progress to see if you're winning or it's close, etc.
+            // isntead of two players having different intensity. One is super try hard bc he thinks the other is right on his heels and everyone else is not trying
+            float[] currentDist = new float[startPositions.Length];
+            float maxDist = 0;
+            
+            if (time > 0)
+            {
+                for (int i = 0; i < startPositions.Length; i++)
+                {
+                    currentDist[i] = Vector3.Distance(startPositions[i], TasksPlugin.GetPlayerCharacterMaster(i).GetBody().transform.position);
+                    if (currentDist[i] > maxDist)
+                    {
+                        maxDist = currentDist[i];
+                    }
+                }
+            }
+            if (maxDist > 0)
+            {
+                for (int i = 0; i < progress.Length; i++)
+                {
+                    progress[i] = (time * (currentDist[i] / maxDist)) / 20;
+                }
+            }
+            else
+            {
+                for (int i = 0; i < progress.Length; i++)
+                {
+                    // if time is 0, it skips the distance calc so maxDist is 0. Reset the progress bar
+                    progress[i] = 0;
+                }
+            }
+            base.UpdateProgress(progress);
+        }
+
         IEnumerator EndTask()
         {
-            yield return new WaitForSeconds(20);
+            for (int i = 0; i < 20; i++)
+            {
+                yield return new WaitForSeconds(1);
+                UpdateProgress(i+1);
+            }
+            //yield return new WaitForSeconds(20);
             Evaluate();
         }
 
@@ -99,6 +143,7 @@ namespace Tasks
             }
 
             CompleteTask(winner);
+            ResetProgress();
         }
 
     }

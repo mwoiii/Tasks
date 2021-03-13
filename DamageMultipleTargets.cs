@@ -26,7 +26,6 @@ namespace Tasks
         // using body might not work because multiple things have the same body 
         // so maybe I can't tell them apart? Like maybe I can't add 2 different beetles to the hash
         HashSet<GameObject>[] targets;
-        float[] progress;
 
         public override string GetDescription()
         {
@@ -44,7 +43,6 @@ namespace Tasks
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
 
             targets = new HashSet<GameObject>[numPlayers];
-            progress = new float[numPlayers];
             for (int i = 0; i < targets.Length; i++)
             {
                 targets[i] = new HashSet<GameObject>();
@@ -122,7 +120,7 @@ namespace Tasks
             {
                 targets[i].Clear();
             }
-            UpdateProgress();
+            ResetProgress();
         }
     }
 }

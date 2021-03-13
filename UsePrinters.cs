@@ -53,6 +53,15 @@ namespace Tasks
             base.Unhook();
         }
 
+        void UpdateProgress()
+        {
+            for (int i = 0; i < progress.Length; i++)
+            {
+                progress[i] = (float)printersUsed[i].Count / numToUse;
+            }
+            base.UpdateProgress(progress);
+        }
+
         void OnInteraction(Interactor interactor, IInteractable interactable, GameObject go)
         {
             int player = 0;
@@ -71,6 +80,7 @@ namespace Tasks
                     if (printersUsed[player].Contains(go))
                         return;
                     printersUsed[player].Add(go);
+                    UpdateProgress();
                     if (IsComplete(player))
                     {
                         Chat.AddMessage($"Player {player} Completed UsePrinters");
@@ -84,6 +94,7 @@ namespace Tasks
         {
             return printersUsed[playerNum].Count >= numToUse;
         }
+
         void Reset()
         {
             if (printersUsed is null)
@@ -92,6 +103,7 @@ namespace Tasks
             {
                 printersUsed[i].Clear();
             }
+            ResetProgress();
         }
     }
 }
