@@ -59,7 +59,7 @@ namespace Tasks
                 bodies = new CharacterBody[numPlayers];
             }
 
-            Reset();
+            //Reset();
             SetupBodies();
             
             // This is how the merc's stay in the air achieve works
@@ -77,6 +77,8 @@ namespace Tasks
 
         protected void UpdateProgress()
         {
+            if (timeInAir is null || progress is null)
+                return;
             for (int i = 0; i < progress.Length; i++)
             {
                 progress[i] = timeInAir[i] / timeToStayInAir;
@@ -94,7 +96,7 @@ namespace Tasks
                 timeInAir[i] = ((motors[i] && !motors[i].isGrounded && !bodies[i].currentVehicle) ? (timeInAir[i] + Time.fixedDeltaTime) : 0f);
                 if(IsComplete(i))
                 {
-                    Chat.AddMessage($"Player {i} Completed StayAirborne");
+                    //Chat.AddMessage($"Player {i} Completed StayAirborne");
                     CompleteTask(i);
                     Reset();
                 }

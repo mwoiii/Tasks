@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Tasks
 {
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill, BabyDrone };
 
     // Put plugin here
     // C:\Program Files (x86)\Steam\steamapps\common\Risk of Rain 2\BepInEx\plugins\MyMods
@@ -89,8 +89,6 @@ namespace Tasks
             
             TasksPlugin.OnActivate += this.Activate;
             TasksPlugin.OnDeactivate += this.Deactivate;
-            TasksPlugin.OnResetAll += this.RemoveAchievement;
-            TasksPlugin.OnPopup += this.ShowPopup;
         }
 
         virtual public void OnUninstall()
@@ -107,9 +105,6 @@ namespace Tasks
 
             TasksPlugin.OnActivate -= this.Activate;
             TasksPlugin.OnDeactivate -= this.Deactivate;
-            TasksPlugin.OnResetAll -= this.RemoveAchievement;
-            TasksPlugin.OnPopup -= this.ShowPopup;
-
 
             // Gets called automatically when I set granted to true
             // but I don't do that because
@@ -154,39 +149,6 @@ namespace Tasks
             return false;
         }
 
-        void ShowPopup(int taskTypeInt)
-        {
-            if (taskTypeInt == (int)type)
-            {
-                // how to make this run on the client?
-                //CharacterMaster m;
-                //TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<UserProfile>().AddAchievement(this.achievementDef.identifier, false);
-                //profile.AddAchievement(this.achievementDef.identifier, false);
-            }
-        }
-
-        void ShowPopup(TaskType t)
-        {
-            if(t == type)
-            {
-                ShowPopup((int)t);
-            }
-        }
-
-        void RemoveAchievement()
-        {
-            /*
-            if (profile != null)
-            {
-                if (profile.HasAchievement(AchievementIdentifier))
-                {
-                    profile.RevokeAchievement(AchievementIdentifier);
-                }
-                profile.RevokeUnlockable(UnlockableCatalog.GetUnlockableDef(UnlockableIdentifier));
-            }
-            */
-        }
-
         public virtual bool CanActivate(int numPlayers)
         {
             return true;
@@ -197,11 +159,6 @@ namespace Tasks
             //Chat.AddMessage($"{id} == {(int)type}: {(id == (int)type)}");
             if(id == (int)type)
             {
-                //Chat.AddMessage("Activated " + id);
-                // Need to remove once for each time you get the achievement
-                // and Can't do it the same frame you get the achieve
-                // so doing it before you activate again works
-                RemoveAchievement();
                 totalNumberPlayers = numPlayers;
                 progress = new float[numPlayers];
                 SetHooks(numPlayers);
@@ -232,9 +189,10 @@ namespace Tasks
 
         void RunOver(Run run)
         {
-            //Chat.AddMessage("onRunDestroyGlobal");
-            // Just in case
-            RemoveAchievement();
+            Unhook();
+
+            OnUninstall();
+            
         }
     }
 }

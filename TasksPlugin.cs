@@ -77,7 +77,6 @@ namespace Tasks
         // Testing
         bool notifTestingFormat = true;
 
-
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
         {
@@ -88,10 +87,12 @@ namespace Tasks
                 instance = this;
             }
 
+
             Task.OnCompletion += TaskCompletion;
             Task.OnUpdateProgress += UpdateTaskProgress;
 
             Run.onRunStartGlobal += GameSetup;
+            
 
             SetupNetworking();
             SetGameHooks();        
@@ -119,6 +120,21 @@ namespace Tasks
             if (Input.GetKeyDown(KeyCode.F3))
             {
                 notifTestingFormat = !notifTestingFormat;
+            }
+            if(Input.GetKeyDown(KeyCode.F4))
+            {
+                Chat.AddMessage("Pressed F4");
+                // spawn a lockbox nearby
+                Xoroshiro128Plus xoroshiro128Plus = new Xoroshiro128Plus(0);
+
+                // "iscbrokendrone1";
+                GameObject gameObject2 = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscLockbox"), new DirectorPlacementRule
+                {
+                    placementMode = DirectorPlacementRule.PlacementMode.Direct,
+                    position = GetPlayerCharacterMaster(0).GetBody().transform.position + new Vector3(1, 0, 0)
+                }, xoroshiro128Plus)); ;
+                Chat.AddMessage($"Spawned {gameObject2.name} at {gameObject2.transform.position}");
+                
             }
 
         }
@@ -174,7 +190,7 @@ namespace Tasks
             // update the type in the class you made
 
             Chat.AddMessage("Creating Task Objects");
-            taskCopies = new Task[14];
+            taskCopies = new Task[15];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -190,6 +206,7 @@ namespace Tasks
             UsePrinters task12 = new UsePrinters();
             OrderedSkills task13 = new OrderedSkills();
             DontUseSkill task14 = new DontUseSkill();
+            BabyDrone task15 = new BabyDrone();
 
             // -1 to ignore the base type
             taskCopies[(int)airKills.type - 1] = airKills;
@@ -206,6 +223,8 @@ namespace Tasks
             taskCopies[(int)task12.type - 1] = task12;
             taskCopies[(int)task13.type - 1] = task13;
             taskCopies[(int)task14.type - 1] = task14;
+            taskCopies[(int)task15.type - 1] = task15;
+
         }
 
         void PopulatePlayerCharaterMasterList()
@@ -268,7 +287,7 @@ namespace Tasks
             updateProgressClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, ProgressInfo progressInfo) =>
             {
                 bool playerLeading = progressInfo.GetMyProgress() > progressInfo.GetRivalProgress();
-
+                //Chat.AddMessage($"Updating {progressInfo.taskIndex} which is {currentTasks[progressInfo.taskIndex]}");
                 UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
                 UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
             });
@@ -314,6 +333,10 @@ namespace Tasks
                 }
                 Chat.AddMessage($"Interacted with {go.name} InterType: {interactableType} Components: {componentsString}");
                 */
+                // drone
+                // [Info   : Unity Log] Interacted with Drone1Broken(Clone) InterType: RoR2.PurchaseInteraction Components: UnityEngine.Transform UnityEngine.Networking.NetworkIdentity RoR2.Highlight RoR2.SummonMasterBehavior RoR2.PurchaseInteraction RoR2.EventFunctions RoR2.Hologram.HologramProjector RoR2.GenericDisplayNameProvider RoR2.ModelLocator 
+
+
                 // Newt Altar
                 // [Info   : Unity Log] Interacted with NewtStatue InterType: RoR2.PurchaseInteraction Components: UnityEngine.Transform RoR2.Highlight UnityEngine.Networking.NetworkIdentity RoR2.PurchaseInteraction RoR2.Hologram.HologramProjector RoR2.PortalStatueBehavior RoR2.UnlockableGranter 
                 // Tele
@@ -514,6 +537,11 @@ namespace Tasks
         /// <param name="percent01">Percent complete between 0 and 1</param>
         void UpdateProgress(RectTransform rect, float percent01)
         {
+            if(rect is null)
+            {
+                Chat.AddMessage("Rect was null");
+                return;
+            }
             rect.sizeDelta = new Vector2(percent01 * 113, 3); // 113 just looks about right
         }
 
@@ -789,6 +817,8 @@ namespace Tasks
 
         void UpdateTaskProgress(TaskType taskType, float[] progress)
         {
+            if (stageStartTasks is null || progress is null)
+                return;
             int taskIndex = 0;
             for (int i = 0; i < stageStartTasks.Length; i++)
             {
@@ -813,6 +843,8 @@ namespace Tasks
                     }
                 }
                 ProgressInfo p = new ProgressInfo(taskIndex, myProgress, rival);
+                if (NetworkUser.readOnlyInstancesList is null || NetworkUser.readOnlyInstancesList.Count <= i)
+                    return;
                 updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
             }
         }
