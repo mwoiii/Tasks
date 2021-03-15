@@ -107,6 +107,9 @@ namespace Tasks
                 {
                     if (damageReport.victimMaster == drones[i])
                     {
+                        //Chat.AddMessage(GetDroneDeathMessage(drones[i].name));
+                        R2API.Utils.ChatMessage.Send(GetDroneDeathMessage(drones[i].name)); // should go to each player?
+                        
                         // a drone died
                         playerFailed[i] = true;
                         numPlayersFailed++;
@@ -176,7 +179,55 @@ namespace Tasks
         string GetDroneName(int playerNum)
         {
             string displayName = TasksPlugin.GetPlayerCharacterMaster(playerNum).GetComponent<PlayerCharacterMasterController>().GetDisplayName();
-            return $"{displayName} Junior";
+            WeightedSelection<string> droneNames = new WeightedSelection<string>(14);
+            droneNames.AddChoice($"{displayName} Junior", 1);
+            droneNames.AddChoice($"{displayName} Jr.", 1);
+            droneNames.AddChoice($"Baby {displayName}", 1);
+            droneNames.AddChoice($"Little {displayName}", 1);
+            droneNames.AddChoice($"Li'l {displayName}", 1);
+            droneNames.AddChoice($"{displayName} the Second", 1);
+            droneNames.AddChoice($"{displayName} the Third", 1);
+            droneNames.AddChoice($"{displayName} II", 1);
+            droneNames.AddChoice($"{displayName} III", 1);
+            droneNames.AddChoice($"{displayName} the Younger", 1);
+            droneNames.AddChoice($"Mini {displayName}", 1);
+            droneNames.AddChoice($"{displayName} Mk II", 1);
+            droneNames.AddChoice($"{displayName} 2.0", 1);
+            droneNames.AddChoice($"{displayName} (Clone)", 1);
+
+
+            return droneNames.Evaluate(UnityEngine.Random.value);
+        }
+
+        string GetDroneDeathMessage(string droneName)
+        {
+
+            WeightedSelection<string> messages = new WeightedSelection<string>();
+            messages.AddChoice($"{droneName} died. And it was all your fault.", 1);
+            messages.AddChoice($"{droneName} died. And you just let it happen.", 1);
+            messages.AddChoice($"{droneName} died because you didn't love him enough.", 1);
+            messages.AddChoice($"{droneName} died. Play on an easier difficulty so this doesn't happen again.", 1);
+            messages.AddChoice($"You killed {droneName}. You monster.", 1);
+            messages.AddChoice($"You let {droneName} die. You monster.", 1);
+            messages.AddChoice($"You let {droneName} die. What did he ever do to you?", 1);
+            messages.AddChoice($"{droneName} said goodbye. When he died.", 1);
+            messages.AddChoice($"{droneName} died. You can repair him, but it won't be the same {droneName}.", 1);
+            messages.AddChoice($"{droneName} has went to a junkyard in the country.", 1);
+            messages.AddChoice($"{droneName} has went to a junkyard in the country.", 1);
+            messages.AddChoice($"MISSION FAILURE! {droneName} has been lost.", 1);
+            messages.AddChoice($"Well, {droneName} has been lost. Hope you're happy", 1);
+            messages.AddChoice($"Well, {droneName} is gone. Hope you're happy", 1);
+            messages.AddChoice($"{droneName} has gone and there shall never be another like him.", 1);
+            messages.AddChoice($"RIP {droneName}, the goodest boy.", 1);
+            messages.AddChoice($"RIP {droneName}.", 1);
+            messages.AddChoice($"At least {droneName} didn't suffer.", 1);
+            messages.AddChoice($"{droneName} deserved better.", 1);
+
+
+
+            string deathMessage = "<style=cDeath><sprite name=\"Skull\" tint=1> " + messages.Evaluate(UnityEngine.Random.value) + " <sprite name=\"Skull\" tint=1></style>";
+
+            return deathMessage;
         }
 
         IEnumerator DamageDrone(CharacterBody droneBody)

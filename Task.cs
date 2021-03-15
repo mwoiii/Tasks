@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Tasks
 {
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill, BabyDrone };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill, BabyDrone, Die, FindLockbox };
 
     // Put plugin here
     // C:\Program Files (x86)\Steam\steamapps\common\Risk of Rain 2\BepInEx\plugins\MyMods
@@ -120,18 +120,21 @@ namespace Tasks
 
         protected void ResetProgress()
         {
-            TasksPlugin.instance.StartCoroutine(ResetProgressInTime());
+            TasksPlugin.instance?.StartCoroutine(ResetProgressInTime());
         }
 
         IEnumerator ResetProgressInTime()
         {
             // you get 3 secs of a full bar
             yield return new WaitForSeconds(4);
-            for (int i = 0; i < progress.Length; i++)
+            if (progress != null)
             {
-                progress[i] = 0;
+                for (int i = 0; i < progress.Length; i++)
+                {
+                    progress[i] = 0;
+                }
+                OnUpdateProgress?.Invoke(type, progress);
             }
-            OnUpdateProgress?.Invoke(type, progress);
         }
 
         virtual protected void CompleteTask(int playerNum)

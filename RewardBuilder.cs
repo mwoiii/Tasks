@@ -17,6 +17,7 @@ namespace Tasks
 
             typeSelection.AddChoice(RewardType.Item, 2);
             typeSelection.AddChoice(RewardType.TempItem, 1);
+            typeSelection.AddChoice(RewardType.Command, 0.5f);
 
             RewardType type = typeSelection.Evaluate(UnityEngine.Random.value);
 
@@ -51,7 +52,6 @@ namespace Tasks
             //PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
             //ItemIndex item = def.itemIndex;
             // ===== End Item
-
 
             Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
 
@@ -94,5 +94,5 @@ namespace Tasks
         public int count;
     }
 
-    public enum RewardType { Item, TempItem, Gold, Xp };
+    public enum RewardType { Item, TempItem, Command, Gold, Xp };
 }

@@ -2,6 +2,7 @@
 using BepInEx;
 using RoR2;
 using RoR2.UI;
+using RoR2.Artifacts;
 using UnityEngine;
 using UnityEngine.Networking;
 using Mono.Cecil.Cil;
@@ -132,9 +133,41 @@ namespace Tasks
                 {
                     placementMode = DirectorPlacementRule.PlacementMode.Direct,
                     position = GetPlayerCharacterMaster(0).GetBody().transform.position + new Vector3(1, 0, 0)
-                }, xoroshiro128Plus)); ;
+                }, xoroshiro128Plus));
                 Chat.AddMessage($"Spawned {gameObject2.name} at {gameObject2.transform.position}");
                 
+            }
+            if(Input.GetKeyDown(KeyCode.F5))
+            {
+                ChatMessage.Send("Do I need to add this API? No. This should go to each player");
+            }
+            if(Input.GetKeyDown(KeyCode.F6))
+            {
+                Chat.AddMessage("Pressed F6");
+                // creating a command orb
+                //typeof(GenericPickupController).InvokeMethod("SendPickupMessage", GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+                // turn on command I believe
+                
+                typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                if(typeof(CommandArtifactManager).GetField("commandCubePrefab") is null)
+                {
+                    Chat.AddMessage("commandCubePrefab is null");
+                }
+                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab",  Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                // need to make an item droplet. Specifically have it hit the ground
+                PickupDropletController.onDropletHitGroundServer += TurnOffCommand;
+                // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
+
+                // icon
+                //RoR2Content.Artifacts.commandArtifactDef.smallIconSelectedSprite
+
+                // create a droplet
+                PickupIndex p = new PickupIndex(ItemIndex.BarrierOnKill);
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
+            }
+            if(Input.GetKeyDown(KeyCode.F7))
+            {
+                Chat.AddMessage("Pressed F7");
             }
 
         }
@@ -190,7 +223,7 @@ namespace Tasks
             // update the type in the class you made
 
             Chat.AddMessage("Creating Task Objects");
-            taskCopies = new Task[15];
+            taskCopies = new Task[17];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -207,6 +240,8 @@ namespace Tasks
             OrderedSkills task13 = new OrderedSkills();
             DontUseSkill task14 = new DontUseSkill();
             BabyDrone task15 = new BabyDrone();
+            Die task16 = new Die();
+            FindLockbox task17 = new FindLockbox();
 
             // -1 to ignore the base type
             taskCopies[(int)airKills.type - 1] = airKills;
@@ -224,7 +259,14 @@ namespace Tasks
             taskCopies[(int)task13.type - 1] = task13;
             taskCopies[(int)task14.type - 1] = task14;
             taskCopies[(int)task15.type - 1] = task15;
+            taskCopies[(int)task16.type - 1] = task16;
+            taskCopies[(int)task17.type - 1] = task17;
 
+            // Can I do something like this?
+            // From RoR2.Chat.ChatMessageBase.BuildMessageTypeNetMap()
+            // foreach (Type type in typeof(Chat.ChatMessageBase).Assembly.GetTypes())
+            //{
+            //    if (type.IsSubclassOf(typeof(Chat.ChatMessageBase)))
         }
 
         void PopulatePlayerCharaterMasterList()
@@ -487,18 +529,33 @@ namespace Tasks
 
                 tasksUIObjects[taskIndex].SetActive(true);
 
+
                 if (itemIconPrefabCopy is null)
                 {
                     itemIconPrefabCopy = FindObjectOfType<ItemInventoryDisplay>().itemIconPrefab;
                 }
                 ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
                 icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
-                
+
                 RectTransform rect = icon.rectTransform;
                 rect.localScale = Vector3.one * 0.5f;
-                
+
                 Image checkBox = tasksUIObjects[taskIndex].transform.Find("Checkbox").GetComponent<Image>();
                 checkBox.color = new Color(0, 0, 0, 0); // invisible
+
+                if (rewards[rewardIndex].type == RewardType.Command)
+                {
+                    //Color32 rarityColor = ColorCatalog.GetColor(ItemCatalog.GetItemDef(rewards[rewardIndex].item.itemIndex).darkColorIndex); // darkColorIndex or colorIndex
+
+                    checkBox.sprite = RoR2Content.Artifacts.commandArtifactDef.smallIconSelectedSprite;
+                    checkBox.color = Color.white;
+
+                    RectTransform checkRect = checkBox.rectTransform;
+                    // the smaller the scale, the more to the left it is
+                    checkRect.localScale = Vector3.one * 0.6f;
+                    checkRect.localPosition += new Vector3(-5, -10, 0);
+                    checkRect.SetAsLastSibling();
+                }
             }
             tasksUIObjects[taskIndex].SetActive(true);
 
@@ -547,6 +604,11 @@ namespace Tasks
 
         void UpdateProgress(RectTransform rect, float percent01, bool playerLeading)
         {
+            if (rect is null)
+            {
+                Chat.AddMessage("Rect was null in rival");
+                return;
+            }
             // this variant is specifically for the rival rect to change the colour and layering
             Image image = rect.GetComponent<Image>();
             // what happens when players are tied? Both have 3/5 kills.
@@ -600,6 +662,12 @@ namespace Tasks
                         ItemIcon icon = tasksUIObjects[i].GetComponentInChildren<ItemIcon>();
                         if(icon)
                             icon.image.color = Color.grey;
+                        Image checkBox = tasksUIObjects[i].transform.Find("Checkbox")?.GetComponent<Image>();
+                        if (checkBox)
+                        {
+                            checkBox.color = new Color(0.5f, 0.5f, 0.5f, checkBox.color.a); // grey, but keeping the alpha. The checkbox is usually invisible. This keeps that
+                        }
+
                     }
                 }
             }
@@ -903,10 +971,33 @@ namespace Tasks
                 // Record what items to remove
                 RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
             }
+            else if(rewards[(int)task].type == RewardType.Command)
+            {
+                typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                if (typeof(CommandArtifactManager).GetField("commandCubePrefab") is null)
+                {
+                    //Chat.AddMessage("commandCubePrefab is null"); // always null??? Is GetField wrong? GetMember GetProperty GetFieldCached???
+                }
+                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                // need to make an item droplet. Specifically have it hit the ground
+                PickupDropletController.onDropletHitGroundServer += TurnOffCommand;
+                // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
+
+                // create a droplet
+                PickupIndex p = rewards[(int)task].item;
+                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(playerNum).GetBody().transform.position, GetPlayerCharacterMaster(playerNum).GetBody().transform.forward * 5);
+            }
             else
             {
                 // give gold or xp
             }
+        }
+
+        static void TurnOffCommand(ref GenericPickupController.CreatePickupInfo createPickupInfo, ref bool shouldSpawn)
+        {
+            // maybe I need to wait 0.1sec?
+            // will this method trigger first or after command's method?
+            typeof(CommandArtifactManager).InvokeMethod("OnArtifactDisabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
         }
 
         void RecordTempItems(int playerNum, PickupIndex item, int count)
