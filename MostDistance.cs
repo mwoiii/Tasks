@@ -37,7 +37,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in MostDistance. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in MostDistance. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 

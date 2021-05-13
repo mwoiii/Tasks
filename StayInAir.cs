@@ -34,7 +34,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in Stay Airborne. {numPlayers} players");
+            Debug.Log($"Set Hooks in Stay Airborne. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 

@@ -31,7 +31,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in BabyDrone. {numPlayers} players");
+            Debug.Log($"Set Hooks in BabyDrone. {numPlayers} players");
 
             base.SetHooks(numPlayers);
             drones = new CharacterMaster[numPlayers];

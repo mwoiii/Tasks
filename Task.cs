@@ -120,6 +120,13 @@ namespace Tasks
 
         protected void ResetProgress()
         {
+            /*
+             * When quiting to desktop from in game. Dunno if this matters
+             [Error  : Unity Log] NullReferenceException
+             Stack trace:
+             UnityEngine.MonoBehaviour.StartCoroutine (System.Collections.IEnumerator routine) (at <2cc17dca390941eeb4d7b2ff1f84696a>:IL_0012)
+             Tasks.Task.ResetProgress () (at <9e2eee2d661
+             */
             TasksPlugin.instance?.StartCoroutine(ResetProgressInTime());
         }
 

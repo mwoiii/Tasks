@@ -31,7 +31,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in OrderedSkills. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in OrderedSkills. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 

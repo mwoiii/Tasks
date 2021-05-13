@@ -43,7 +43,7 @@ namespace Tasks
         protected override void SetHooks(int numPlayers)
         {
             //Language.currentLanguage.SetStringByToken(AchievementNameToken, "Air Kills");
-            Chat.AddMessage($"Set Hooks in AirKills. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in AirKills. {numPlayers} players");
             
 
             base.SetHooks(numPlayers);
@@ -141,7 +141,7 @@ namespace Tasks
                 UpdateProgress();
                 if(IsComplete(playerNum))
                 {
-                    Chat.AddMessage($"Player {playerNum} Completed AirKills");
+                    //Chat.AddMessage($"Player {playerNum} Completed AirKills");
                     CompleteTask(playerNum);
                     // What about getting 2nd place?
                     ResetAllKills();

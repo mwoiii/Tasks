@@ -38,7 +38,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in DontUseSkill. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in DontUseSkill. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -107,7 +107,7 @@ namespace Tasks
             {
                 if (playerFailed[playerNum])
                     return;
-                Chat.AddMessage($"Player {playerNum} failed BadSkill");
+                UnityEngine.Debug.Log($"Player {playerNum} failed BadSkill");
                 playerFailed[playerNum] = true;
                 numPlayersFailed++;
                 UpdateProgress();

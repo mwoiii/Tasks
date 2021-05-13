@@ -38,7 +38,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in FarthestAway. {numPlayers} players");
+            Debug.Log($"Set Hooks in FarthestAway. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 

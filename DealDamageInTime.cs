@@ -40,7 +40,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in DamageInTime. {numPlayers} players");
+            Debug.Log($"Set Hooks in DamageInTime. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -94,7 +94,7 @@ namespace Tasks
             TasksPlugin.instance.StartCoroutine(ReduceDamage(report.damageDealt, playerNum));
             if (IsComplete(playerNum))
             {
-                Chat.AddMessage($"Player {playerNum} Completed DamageInTime");
+                //Chat.AddMessage($"Player {playerNum} Completed DamageInTime");
 
                 active = false;
                 CompleteTask(playerNum);

@@ -184,7 +184,7 @@ namespace Tasks
 
             TaskSetup();
 
-            Chat.AddMessage($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
+            Debug.Log($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
             totalNumPlayers = run.participatingPlayerCount;
             playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
 
@@ -194,13 +194,13 @@ namespace Tasks
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
-            Chat.AddMessage("ItemInventoryDisplay");
+            Debug.Log("ItemInventoryDisplay");
             // why did this used to work?
             ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
             if (display is null)
             {
                 // why are you null
-                Chat.AddMessage("Display is null");
+                Debug.Log("Display is null");
             }
             else
             {
@@ -221,8 +221,8 @@ namespace Tasks
             // Create a new object, add it to the array
             // add a new type to the TaskType enum in Task.cs
             // update the type in the class you made
-
-            Chat.AddMessage("Creating Task Objects");
+            
+            Debug.Log("Creating Task Objects");
             taskCopies = new Task[17];
 
             AirKills airKills = new AirKills();
@@ -237,8 +237,8 @@ namespace Tasks
             OpenChests task10 = new OpenChests();
             StartTeleporter task11 = new StartTeleporter();
             UsePrinters task12 = new UsePrinters();
-            OrderedSkills task13 = new OrderedSkills();
-            DontUseSkill task14 = new DontUseSkill();
+            OrderedSkills task13 = new OrderedSkills(); // these are pretty bad tasks
+            DontUseSkill task14 = new DontUseSkill(); // this too
             BabyDrone task15 = new BabyDrone();
             Die task16 = new Die();
             FindLockbox task17 = new FindLockbox();
@@ -400,7 +400,7 @@ namespace Tasks
                 {
                     // Multishops AND 3D printers
                     // [Info   : Unity Log] Interacted with multishop. InterType: RoR2.PurchaseInteraction
-                    Chat.AddMessage("Interacted with multishop. InterType: " + interactableType + " name: " + go.name);
+                    //Chat.AddMessage("Interacted with multishop. InterType: " + interactableType + " name: " + go.name);
                     // MultiShopTerminal(Clone)
                     // DuplicatorLarge(Clone) --- Duplicator(Clone)
                 }
@@ -408,7 +408,7 @@ namespace Tasks
                 {
                     // damage chest, eq chest, small chest all worked
                     // [Info   : Unity Log] Interacted with chest. InterType: RoR2.PurchaseInteraction
-                    Chat.AddMessage("Interacted with chest. InterType: " + interactableType + " name: " + go.name);
+                    //Chat.AddMessage("Interacted with chest. InterType: " + interactableType + " name: " + go.name);
                     // CategoryChestUtility(Clone) --- CategoryChestDamage(Clone)
                     // Chest1 --- Chest2
                     // EquipmentBarrel(Clone)
@@ -416,12 +416,12 @@ namespace Tasks
                 if (go?.GetComponent<BarrelInteraction>())
                 {
                     // [Info   : Unity Log] Interacted with a barrel. InterType: RoR2.BarrelInteraction
-                    Chat.AddMessage("Interacted with a barrel. InterType: " + interactableType + " name: " + go.name);
+                    //Chat.AddMessage("Interacted with a barrel. InterType: " + interactableType + " name: " + go.name);
                     // Barrel1(Clone)
                 }
                 if (go?.GetComponent<PrintController>())
                 {
-                    Chat.AddMessage("Interacted with a 3D printer. InterType: " + interactableType + " name: " + go.name);
+                    //Chat.AddMessage("Interacted with a 3D printer. InterType: " + interactableType + " name: " + go.name);
                 }
                 // when you use a 3D printer or eq drone i think or pool prob
                 // PurchaseInteraction.onItemSpentOnPurchase += method
@@ -439,23 +439,23 @@ namespace Tasks
                 if (go?.GetComponent<TeleporterInteraction>())
                 {
                     // this might be true for interacting with the end tp to switch to loop mode
-                    Chat.AddMessage("Interacted with TP. InterType: " + interactableType + " name: " + go.name);
+                    Debug.Log("Interacted with TP. InterType: " + interactableType + " name: " + go.name);
                 }
                 else if(go?.GetComponent<SceneExitController>())
                 {
                     // not a tp so probably some kind of tp like blue or gold
-                    Chat.AddMessage($"Interacted with a SceneExitController {go.name}");
+                    Debug.Log($"Interacted with a SceneExitController {go.name}");
                     StageEnd();
                 }
                 
             };
             TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
             {
-                
+
                 // Once the tele event starts
                 // triggers on the client
                 // So you interact, then wait a few secs, then this triggers, then the boss spawns
-                Chat.AddMessage("TP event started");
+                Debug.Log("TP event started");
                 // I can add additional tasks here (or maybe in OnInteraction(tele) as that runs first
                 // however, that runs twice. Once to start the tp, again to leave the stage
             };
@@ -463,14 +463,14 @@ namespace Tasks
             {
                 // when the charge hits 100%
                 // triggers on the client
-                Chat.AddMessage("TP charged to 100%");
+                Debug.Log("TP charged to 100%");
 
             };
             TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
             {
                 // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
                 // triggers on the client
-                Chat.AddMessage("TP finished and player chose to leave");
+                Debug.Log("TP finished and player chose to leave");
                 if (NetworkServer.active)
                 {
                     StageEnd();
@@ -480,7 +480,7 @@ namespace Tasks
             BossGroup.onBossGroupDefeatedServer += (BossGroup group) =>
             {
                 // this works. Timer too
-                Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
+                //Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
             };
 
             On.RoR2.Run.OnServerTeleporterPlaced += (orig, self, director, teleporter) =>
@@ -596,7 +596,7 @@ namespace Tasks
         {
             if(rect is null)
             {
-                Chat.AddMessage("Rect was null");
+                Debug.Log("Rect was null");
                 return;
             }
             rect.sizeDelta = new Vector2(percent01 * 113, 3); // 113 just looks about right
@@ -606,7 +606,7 @@ namespace Tasks
         {
             if (rect is null)
             {
-                Chat.AddMessage("Rect was null in rival");
+                Debug.Log("Rect was null in rival");
                 return;
             }
             // this variant is specifically for the rival rect to change the colour and layering
@@ -643,7 +643,7 @@ namespace Tasks
                 {
                     if(tasksUIObjects[i] is null)
                     {
-                        Chat.AddMessage($"UI Object {i} was null");
+                        Debug.Log($"UI Object {i} was null");
                         break;
                     }
 
@@ -652,7 +652,7 @@ namespace Tasks
                     TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[i].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
                     if(textMeshLabel is null)
                     {
-                        Chat.AddMessage("Couldn't strikethrough");
+                        Debug.Log("Couldn't strikethrough");
                     }
                     else
                     {
@@ -707,7 +707,7 @@ namespace Tasks
 
                 // These 2 lines for debugging
                 int r = taskIDNumbers[i];
-                Chat.AddMessage(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
+                Debug.Log(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
 
                 OnActivate?.Invoke(taskIDNumbers[i], totalNumPlayers);
             }
@@ -718,7 +718,7 @@ namespace Tasks
 
                 if(NetworkUser.readOnlyInstancesList is null)
                 {
-                    Chat.AddMessage("List is null");
+                    Debug.Log("List is null");
                     return;
                 }
                 // Send a list of all tasks to all players
@@ -737,7 +737,7 @@ namespace Tasks
                 }
                 else
                 {
-                    Chat.AddMessage("No network users");
+                    Debug.Log("No network users");
                 }
             }
         }
@@ -792,13 +792,13 @@ namespace Tasks
                 }
                 else
                 {
-                    Chat.AddMessage($"Skipped {(TaskType)(i+1):g}");
+                    Debug.Log($"Skipped {(TaskType)(i+1):g}");
                 }
             }
             if (count > allTasks.Count)
             {
                 // uh oh
-                Chat.AddMessage($"Not enough tasks({allTasks.Count}). Wanted {count}.");
+                Debug.Log($"Not enough tasks({allTasks.Count}). Wanted {count}.");
             }
             
             for (int i = 0; i < results.Length; i++)
@@ -864,7 +864,7 @@ namespace Tasks
                     return i;
                 }
             }
-            Chat.AddMessage("CharMaster didn't match any players");
+            Debug.Log("CharMaster didn't match any players");
             return -1;
         }
 
@@ -875,7 +875,7 @@ namespace Tasks
 
         void TaskCompletion(TaskType taskType, int playerNum)
         {
-            Chat.AddMessage("SERVER(" + (NetworkServer.active ? "active" : "not active") + "): Player " + playerNum + " completed task " + taskType.ToString());
+            Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "): Player " + playerNum + " completed task " + taskType.ToString());
             // this works at least
             GiveReward(taskType, playerNum);
 
@@ -1004,7 +1004,7 @@ namespace Tasks
         {
             if(playerNum < 0)
             {
-                Chat.AddMessage("Didn't find a match. Couldn't record items");
+                Debug.Log("Didn't find a match. Couldn't record items");
                 return;
             }
             TempItemLists[playerNum].Add(new TempItem(item, count));

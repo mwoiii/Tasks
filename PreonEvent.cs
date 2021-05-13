@@ -40,7 +40,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in PreonEvent. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in PreonEvent. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 

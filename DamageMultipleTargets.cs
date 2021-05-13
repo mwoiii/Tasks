@@ -34,7 +34,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in DamageMultiple. {numPlayers} players");
+            Debug.Log($"Set Hooks in DamageMultiple. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -86,7 +86,7 @@ namespace Tasks
                 UpdateProgress();
                 if (IsComplete(playerNum))
                 {
-                    Chat.AddMessage($"Player {playerNum} Completed DamageMultiple");
+                    //Chat.AddMessage($"Player {playerNum} Completed DamageMultiple");
                     CompleteTask(playerNum);
                     // reset
                     ResetKills();

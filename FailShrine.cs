@@ -28,7 +28,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in FailShrine. {numPlayers} players");
+            UnityEngine.Debug.Log($"Set Hooks in FailShrine. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -51,7 +51,7 @@ namespace Tasks
                 {
                     if (TasksPlugin.GetPlayerCharacterMaster(i).GetBody().GetComponent<Interactor>() == interactor)
                     {
-                        Chat.AddMessage($"Player {i} Completed FailShrine");
+                        //Chat.AddMessage($"Player {i} Completed FailShrine");
                         CompleteTask(i);
                         return;
                     }

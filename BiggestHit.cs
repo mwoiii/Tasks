@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using UnityEngine;
 
 namespace Tasks
 {
@@ -48,7 +49,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in BiggestHit. {numPlayers} players");
+            Debug.Log($"Set Hooks in BiggestHit. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -68,7 +69,7 @@ namespace Tasks
         {
             if (!active)
                 return;
-            Chat.AddMessage("Unhook BiggestHit. This should only run once");
+            //Chat.AddMessage("Unhook BiggestHit. This should only run once");
             active = false;
             
             Evaluate();
@@ -119,7 +120,7 @@ namespace Tasks
             float damage = report.damageDealt;
             if(damage > biggestHit[playerNum])
             {
-                Chat.AddMessage($"Set new big hit for player {playerNum}. {biggestHit[playerNum]} -> {damage}");
+                //Debug.Log($"Set new big hit for player {playerNum}. {biggestHit[playerNum]} -> {damage}");
                 biggestHit[playerNum] = damage;
                 UpdateProgress();
             }

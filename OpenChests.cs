@@ -31,7 +31,7 @@ namespace Tasks
 
         protected override void SetHooks(int numPlayers)
         {
-            Chat.AddMessage($"Set Hooks in OpenChests. {numPlayers} players");
+            Debug.Log($"Set Hooks in OpenChests. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
@@ -87,7 +87,7 @@ namespace Tasks
 
             if (IsComplete(player))
             {
-                Chat.AddMessage($"Player {player} Completed OpenChests");
+                //Chat.AddMessage($"Player {player} Completed OpenChests");
                 CompleteTask(player);
             }
 
