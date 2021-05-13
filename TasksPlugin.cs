@@ -26,7 +26,7 @@ namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency(MiniRpcPlugin.Dependency)]
-    [R2APISubmoduleDependency(nameof(UnlockablesAPI), nameof(ItemDropAPI))]
+    [R2APISubmoduleDependency(nameof(ItemDropAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -109,7 +109,7 @@ namespace Tasks
         {
             if (Input.GetKeyDown(KeyCode.F1))
             {
-                PickupIndex p = new PickupIndex(ItemIndex.BarrierOnKill);
+                PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
                 PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
             }
             if (Input.GetKeyDown(KeyCode.F2))
@@ -162,7 +162,7 @@ namespace Tasks
                 //RoR2Content.Artifacts.commandArtifactDef.smallIconSelectedSprite
 
                 // create a droplet
-                PickupIndex p = new PickupIndex(ItemIndex.BarrierOnKill);
+                PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
                 PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
             }
             if(Input.GetKeyDown(KeyCode.F7))
@@ -1043,10 +1043,10 @@ namespace Tasks
             for (int i = 0; i < playerCharacterMasters.Count; i++)
             {
                 instance.preonEventEqCache[i] = playerCharacterMasters[i].inventory.currentEquipmentIndex;
-                playerCharacterMasters[i].inventory.SetEquipmentIndex(EquipmentIndex.BFG);
+                playerCharacterMasters[i].inventory.SetEquipmentIndex(RoR2Content.Equipment.BFG.equipmentIndex);
                 //playerCharacterMasters[i].inventory.GiveItem(ItemIndex.AutoCastEquipment); // annoying while testing stuff
-                playerCharacterMasters[i].inventory.GiveItem(ItemIndex.Talisman); // soulbound catalyst. Kills reduce eq cd
-                playerCharacterMasters[i].inventory.GiveItem(ItemIndex.EquipmentMagazine, 5);
+                playerCharacterMasters[i].inventory.GiveItem(RoR2Content.Items.Talisman); // soulbound catalyst. Kills reduce eq cd
+                playerCharacterMasters[i].inventory.GiveItem(RoR2Content.Items.EquipmentMagazine, 5);
             }
 
         }
@@ -1057,8 +1057,9 @@ namespace Tasks
             {
                 playerCharacterMasters[i].inventory.SetEquipmentIndex(instance.preonEventEqCache[i]);
                 //playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.AutoCastEquipment);
-                playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.Talisman);
-                playerCharacterMasters[i].inventory.RemoveItem(ItemIndex.EquipmentMagazine, 5);
+                // (RoR2Content.Items.Crowbar
+                playerCharacterMasters[i].inventory.RemoveItem(RoR2Content.Items.Talisman);
+                playerCharacterMasters[i].inventory.RemoveItem(RoR2Content.Items.EquipmentMagazine, 5);
             }
         }
 

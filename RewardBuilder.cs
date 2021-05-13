@@ -23,6 +23,16 @@ namespace Tasks
 
 
             // ===== Item
+            // After update. This should be all I need
+            // I think this will give me the list of white items 80% of the time and the list of green items 20% of the time (or whatevs the rates are)
+            // 0.8, 0.2, 0.01
+            var smallChestList = Run.instance.smallChestDropTierSelector.Evaluate(UnityEngine.Random.value);
+            PickupIndex smallItem = Run.instance.treasureRng.NextElementUniform<PickupIndex>(smallChestList);
+
+            // randomly selecting a chest type isn;t even important. I never made themed tasks that reward a utily chest or a damage chest specifically.
+            // I can change small/med/large chests for harder tasks
+            /*
+            // I'm p sure ItemDropLocation was an enum (it's not there anymore)
             WeightedSelection<ItemDropLocation> chestSelection = new WeightedSelection<ItemDropLocation>();
 
             // wiki says weights are small:24, med:4, large:2, specialty:2
@@ -46,16 +56,31 @@ namespace Tasks
             // 43 would map to 24 +4 +8 =36 < 43 < 24+4+8+8 =44 so the damage chest
             ItemDropLocation chest = chestSelection.Evaluate(UnityEngine.Random.value);
 
+            
+            // special chests
+            // chest behaviour is a monobehaviour so i can't do this I don't think
+            //ChestBehavior c = new ChestBehavior();
+            // I have no idea how RollItem uses the required tag
+            //c.requiredItemTag = ItemTag.Damage;
+            //c.RollItem();
+            //c.dropPickup; // private
+
+
+            // New way to get the list of items that can drop
+            // then need to randomize them
+            List<PickupIndex> tier1Drops = Run.instance.availableTier1DropList;
+
             // get a random item from a specific chest
             // and turn it into an itemIndex (as opposed to a pickupIndex which seems to be depreciated
             PickupIndex pickupIndex = ItemDropAPI.GetSelection(chest, UnityEngine.Random.value);
             //PickupDef def = PickupCatalog.GetPickupDef(pickupIndex);
             //ItemIndex item = def.itemIndex;
+            */
             // ===== End Item
 
-            Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
+            //Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
 
-            Reward reward = new Reward(type, pickupIndex, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
+            Reward reward = new Reward(type, smallItem, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
             return reward;
         }
         
@@ -95,4 +120,5 @@ namespace Tasks
     }
 
     public enum RewardType { Item, TempItem, Command, Gold, Xp };
+
 }

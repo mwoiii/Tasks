@@ -16,7 +16,7 @@ namespace Tasks
             int rustyKeys = 0;
             foreach (CharacterMaster characterMaster in CharacterMaster.readOnlyInstancesList)
             {
-                rustyKeys += characterMaster.inventory.GetItemCount(ItemIndex.TreasureCache);
+                rustyKeys += characterMaster.inventory.GetItemCount(RoR2Content.Items.TreasureCache);
             }
             
             return (rustyKeys > 0);
