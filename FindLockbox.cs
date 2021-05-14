@@ -33,6 +33,7 @@ namespace Tasks
 
             GlobalEventManager.OnInteractionsGlobal += ChestsOpened;
 
+            TasksPlugin.StartLockboxTask();
         }
 
         protected override void Unhook()

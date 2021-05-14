@@ -223,7 +223,7 @@ namespace Tasks
             // update the type in the class you made
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[17];
+            taskCopies = new Task[19];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -242,6 +242,9 @@ namespace Tasks
             BabyDrone task15 = new BabyDrone();
             Die task16 = new Die();
             FindLockbox task17 = new FindLockbox();
+            HealingItem task18 = new HealingItem();
+            NoJump task19 = new NoJump();
+            // Make the array bigger. Equal to whatever the last name is
 
             // -1 to ignore the base type
             taskCopies[(int)airKills.type - 1] = airKills;
@@ -261,6 +264,9 @@ namespace Tasks
             taskCopies[(int)task15.type - 1] = task15;
             taskCopies[(int)task16.type - 1] = task16;
             taskCopies[(int)task17.type - 1] = task17;
+            taskCopies[(int)task18.type - 1] = task18;
+            taskCopies[(int)task19.type - 1] = task19;
+
 
             // Can I do something like this?
             // From RoR2.Chat.ChatMessageBase.BuildMessageTypeNetMap()
@@ -1060,6 +1066,19 @@ namespace Tasks
                 // (RoR2Content.Items.Crowbar
                 playerCharacterMasters[i].inventory.RemoveItem(RoR2Content.Items.Talisman);
                 playerCharacterMasters[i].inventory.RemoveItem(RoR2Content.Items.EquipmentMagazine, 5);
+            }
+        }
+
+        public static void StartLockboxTask()
+        {
+            // give everyone a key
+            // task is only available when someone gets the first key
+            // but now you need a key to open the box
+            // don't think I need to remove them after. 
+            // It could get out of hand if you get multiple find the lockbox tasks
+            for (int i = 0; i < playerCharacterMasters.Count; i++)
+            {
+                playerCharacterMasters[i].inventory.GiveItem(RoR2Content.Items.TreasureCache);
             }
         }
 
