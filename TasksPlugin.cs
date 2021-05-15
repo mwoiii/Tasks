@@ -87,7 +87,9 @@ namespace Tasks
             {
                 instance = this;
             }
-
+            ConfigManager c = new ConfigManager();
+            ConfigManager.instance.SetConfigFile(Config);
+            ConfigManager.instance.Awake();
 
             Task.OnCompletion += TaskCompletion;
             Task.OnUpdateProgress += UpdateTaskProgress;
@@ -168,6 +170,8 @@ namespace Tasks
             if(Input.GetKeyDown(KeyCode.F7))
             {
                 Chat.AddMessage("Pressed F7");
+                Chat.AddMessage($"Config: AirKills Weight: {ConfigManager.instance.GetTaskWeight(TaskType.AirKills)}");
+                Chat.AddMessage($"Config: AirKills Weight: {ConfigManager.instance.GetTaskWeight(TaskType.DamageMultiple)}");
             }
 
         }
@@ -785,33 +789,61 @@ namespace Tasks
         int[] GetRandomUniqueTasks(int count)
         {
             // all possible tasks. Ignore the base task
-            List<int> allTasks = new List<int>(totalNumTasks - 1);
+            List<int> availableTasks = new List<int>(totalNumTasks - 1);
             int[] results = new int[count];
 
             for (int i = 0; i < totalNumTasks-1; i++)
             {
-                // +1 to ignore the base task
                 if(taskCopies[i].CanActivate(totalNumPlayers))
                 {
-                    allTasks.Add(i + 1);
-
+                    // +1 to ignore the base task
+                    availableTasks.Add(i + 1);
                 }
                 else
                 {
                     Debug.Log($"Skipped {(TaskType)(i+1):g}");
                 }
             }
-            if (count > allTasks.Count)
+            if (count > availableTasks.Count)
             {
                 // uh oh
-                Debug.Log($"Not enough tasks({allTasks.Count}). Wanted {count}.");
+                Debug.Log($"Not enough tasks({availableTasks.Count}). Wanted {count}.");
             }
             
             for (int i = 0; i < results.Length; i++)
             {
-                int r = UnityEngine.Random.Range(0, allTasks.Count);
-                results[i] = allTasks[r];
-                allTasks.RemoveAt(r);
+                int r = UnityEngine.Random.Range(0, availableTasks.Count);
+                results[i] = availableTasks[r];
+                availableTasks.RemoveAt(r);
+            }
+
+            return results;
+        }
+
+        int[] GetWeightedTasks(int count)
+        {
+            int[] results = new int[count];
+            WeightedSelection<TaskType> types = new WeightedSelection<TaskType>();
+            // start at 1 to ignore the base task type
+            for (int i = 1; i < totalNumTasks; i++)
+            {
+                // taskCopies doesn't have a place for the base task
+                if (taskCopies[i - 1].CanActivate(totalNumPlayers))
+                {
+                    TaskType type = (TaskType)i;
+                    types.AddChoice(type, ConfigManager.instance.GetTaskWeight(type));
+                }
+            }
+
+            //types.RemoveChoice
+            for (int i = 0; i < count; i++)
+            {
+                // maybe this works?
+                // as you choose tasks, remove them from the list
+                float r = UnityEngine.Random.value;
+                results[i] = (int)types.Evaluate(r);
+                int index = types.EvaluteToChoiceIndex(r);
+                types.RemoveChoice(index);
             }
 
             return results;
