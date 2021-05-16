@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using RoR2;
 using R2API;
+using UnityEngine;
 
 namespace Tasks
 {
@@ -18,6 +19,8 @@ namespace Tasks
             typeSelection.AddChoice(RewardType.Item, 2);
             typeSelection.AddChoice(RewardType.TempItem, 1);
             typeSelection.AddChoice(RewardType.Command, 0.5f);
+            typeSelection.AddChoice(RewardType.Drone, 0.5f);
+
 
             RewardType type = typeSelection.Evaluate(UnityEngine.Random.value);
 
@@ -80,15 +83,77 @@ namespace Tasks
 
             //Chat.AddMessage($"Reward created: {pickupIndex:g} from a {chest:g}");
 
-            Reward reward = new Reward(type, smallItem, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100);
+            string path = GetRandomDronePath();
+
+            Reward reward = new Reward(type, smallItem, (type == RewardType.TempItem) ? 5 : 1, false, 100, 100, path);
             return reward;
         }
         
+        public static string GetRandomDronePath()
+        {
+            // https://github.com/risk-of-thunder/R2Wiki/wiki/Resources-Paths to find other names
+
+            WeightedSelection<string> randomBotPaths = new WeightedSelection<string>();
+
+            randomBotPaths.AddChoice("iscBrokenDrone1", 4);
+            randomBotPaths.AddChoice("iscBrokenDrone2", 4); // healing?
+            randomBotPaths.AddChoice("iscBrokenTurret1", 3);
+            randomBotPaths.AddChoice("iscBrokenFlameDrone", 1);
+            randomBotPaths.AddChoice("iscBrokenEmergencyDrone", 1);
+            randomBotPaths.AddChoice("iscBrokenMissileDrone", 0.5f);
+
+            return randomBotPaths.Evaluate(UnityEngine.Random.value);
+        }
+
+        public static string GetDroneTexturePath(string spawnCardName)
+        {
+            switch (spawnCardName)
+            {
+                case "iscBrokenDrone1":
+                    return "Textures/BodyIcons/texDrone1Icon";
+
+                case "iscBrokenDrone2":
+                    return "Textures/BodyIcons/texDrone2Icon";
+
+                case "iscBrokenTurret1":
+                    return "Textures/BodyIcons/texTurret1Icon";
+
+                case "iscBrokenFlameDrone":
+                    return "Textures/BodyIcons/FlameDroneBody";
+
+                case "iscBrokenEmergencyDrone":
+                    return "Textures/BodyIcons/EmergencyDroneBody";
+
+                case "iscBrokenMissileDrone":
+                    return "Textures/BodyIcons/texMissileDroneIcon";
+            }
+            return "Textures/BodyIcons/texDrone1Icon";
+        }
+
+        public static void GivePlayerDrone(int playerNum, string droneSpawnCardName)
+        {
+            CharacterBody playerBody = TasksPlugin.GetPlayerCharacterMaster(playerNum).GetBody();
+
+            GameObject groundDrone = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/" +droneSpawnCardName), new DirectorPlacementRule
+            {
+                placementMode = DirectorPlacementRule.PlacementMode.NearestNode,
+                position = playerBody.transform.position + new Vector3(1, 0, 0)
+            }, new Xoroshiro128Plus(0)));
+
+            PurchaseInteraction purchase = groundDrone.GetComponent<PurchaseInteraction>();
+            purchase.cost = 0;
+            Interactor i = playerBody.GetComponent<Interactor>();
+            if(i)
+            {
+                purchase.OnInteractionBegin(i);
+            }
+        }
+
     }
 
     public struct Reward
     {
-        public Reward(RewardType _type, PickupIndex _item, int _numItems, bool _temporary, int _gold, int _xp)
+        public Reward(RewardType _type, PickupIndex _item, int _numItems, bool _temporary, int _gold, int _xp, string _path)
         {
             type = _type;
             item = _item;
@@ -96,6 +161,7 @@ namespace Tasks
             temporary = _temporary;
             gold = _gold;
             xp = _xp;
+            dronePath = _path;
         }
 
         public RewardType type;
@@ -104,6 +170,7 @@ namespace Tasks
         public bool temporary;
         public int gold;
         public int xp;
+        public string dronePath;
 
         public override string ToString() => $"{type:g}, {item:g}";
     }
@@ -119,6 +186,6 @@ namespace Tasks
         public int count;
     }
 
-    public enum RewardType { Item, TempItem, Command, Gold, Xp };
+    public enum RewardType { Item, TempItem, Command, Gold, Xp, Drone };
 
 }

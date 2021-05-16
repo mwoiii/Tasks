@@ -565,6 +565,12 @@ namespace Tasks
                     checkRect.localScale = Vector3.one * 0.6f;
                     checkRect.localPosition += new Vector3(-5, -10, 0);
                     checkRect.SetAsLastSibling();
+                }               
+
+                if(rewards[rewardIndex].type == RewardType.Drone)
+                {
+                    string path = RewardBuilder.GetDroneTexturePath(rewards[rewardIndex].dronePath);
+                    icon.image.texture = Resources.Load<Texture>(path);
                 }
             }
             tasksUIObjects[taskIndex].SetActive(true);
@@ -1025,6 +1031,10 @@ namespace Tasks
                 PickupIndex p = rewards[(int)task].item;
                 PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(playerNum).GetBody().transform.position, GetPlayerCharacterMaster(playerNum).GetBody().transform.forward * 5);
             }
+            else if(rewards[(int)task].type == RewardType.Drone)
+            {
+                RewardBuilder.GivePlayerDrone(playerNum, rewards[(int)task].dronePath);
+            }
             else
             {
                 // give gold or xp
@@ -1179,6 +1189,7 @@ namespace Tasks
                 writer.Write(reward.temporary);
                 writer.Write(reward.gold);
                 writer.Write(reward.xp);
+                writer.Write(reward.dronePath);
             }
 
             public override void Deserialize(NetworkReader reader)
@@ -1195,9 +1206,10 @@ namespace Tasks
                 bool temp = reader.ReadBoolean();
                 int gold = reader.ReadInt32();
                 int xp = reader.ReadInt32();
+                string path = reader.ReadString();
 
                 PickupIndex p = new PickupIndex(item);
-                reward = new Reward((RewardType)type, p, numItems, temp, gold, xp);
+                reward = new Reward((RewardType)type, p, numItems, temp, gold, xp, path);
             }
             public TaskInfo(int _type, string _description, bool _completed, int _index, int _total, Reward _reward)
             {

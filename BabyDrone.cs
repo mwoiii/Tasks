@@ -136,6 +136,7 @@ namespace Tasks
         {
             CharacterBody playerBody = TasksPlugin.GetPlayerCharacterMaster(playerNum).GetBody();
 
+            // https://github.com/risk-of-thunder/R2Wiki/wiki/Resources-Paths to find other names
             GameObject groundDrone = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscbrokendrone1"), new DirectorPlacementRule
             {
                 placementMode = DirectorPlacementRule.PlacementMode.Direct,
