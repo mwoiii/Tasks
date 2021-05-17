@@ -225,9 +225,10 @@ namespace Tasks
             // Create a new object, add it to the array
             // add a new type to the TaskType enum in Task.cs
             // update the type in the class you made
+            // Update ConfigManaer with the new task (kinda optional. Won't break if you don't)
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[19];
+            taskCopies = new Task[20];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -248,6 +249,7 @@ namespace Tasks
             FindLockbox task17 = new FindLockbox();
             HealingItem task18 = new HealingItem();
             NoJump task19 = new NoJump();
+            VeryBest task20 = new VeryBest();
             // Make the array bigger. Equal to whatever the last name is
 
             // -1 to ignore the base type
@@ -270,6 +272,8 @@ namespace Tasks
             taskCopies[(int)task17.type - 1] = task17;
             taskCopies[(int)task18.type - 1] = task18;
             taskCopies[(int)task19.type - 1] = task19;
+            taskCopies[(int)task20.type - 1] = task20;
+
 
 
             // Can I do something like this?
@@ -921,6 +925,11 @@ namespace Tasks
         {
             Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "): Player " + playerNum + " completed task " + taskType.ToString());
             // this works at least
+            // server is inactive when you quit the game.
+            // some tasks trigger when the stage ends or you quit the stage.
+            // do this to not try to give out items for those tasks
+            if (!NetworkServer.active)
+                return;
             GiveReward(taskType, playerNum);
 
             taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
@@ -963,6 +972,9 @@ namespace Tasks
 
         void GiveReward(TaskType task, int playerNum)
         {
+            // Some tasks end when the level ends.
+            if (playerCharacterMasters is null)
+                return;
             if(rewards[(int)task].type == RewardType.Item)
             {
                 playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
@@ -1071,7 +1083,7 @@ namespace Tasks
                     count++;
                     if (count > 50)
                     {
-                        Chat.AddMessage("Oops. Infinite loop. Quitting remove temp items");
+                        Debug.Log("Oops. Infinite loop. Quitting remove temp items");
                         return;
                     }
                         

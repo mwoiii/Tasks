@@ -31,6 +31,8 @@ namespace Tasks
         public static ConfigEntry<float> FindLockboxWeight { get; set; }
         public static ConfigEntry<float> HealingItemWeight { get; set; }
         public static ConfigEntry<float> NoJumpWeight { get; set; }
+        public static ConfigEntry<float> VeryBestWeight { get; set; }
+
 
 
 
@@ -171,6 +173,12 @@ namespace Tasks
                 1.0f,
                 "Relative weight of this task."
                 );
+            VeryBestWeight = config.Bind<float>(
+                "TaskWeights",
+                "VeryBest",
+                1.5f,
+                "Relative weight of this task. Be the very best. Like no one ever was."
+                );
         }
 
         public float GetTaskWeight(TaskType type)
@@ -233,6 +241,9 @@ namespace Tasks
 
                 case TaskType.NoJump:
                     return NoJumpWeight.Value;
+
+                case TaskType.VeryBest:
+                    return VeryBestWeight.Value;
             }
             return 1;
         }

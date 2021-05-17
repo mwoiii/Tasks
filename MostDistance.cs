@@ -60,7 +60,7 @@ namespace Tasks
         {
             if (!active)
                 return;
-            Chat.AddMessage("Unhook MostDistance. This should only run once");
+            UnityEngine.Debug.Log("Unhook MostDistance. This should only run once");
             active = false;
 
             Evaluate();
