@@ -32,6 +32,10 @@ namespace Tasks
         public static ConfigEntry<float> HealingItemWeight { get; set; }
         public static ConfigEntry<float> NoJumpWeight { get; set; }
         public static ConfigEntry<float> VeryBestWeight { get; set; }
+        public static ConfigEntry<float> FewestElitesWeight { get; set; }
+        public static ConfigEntry<float> GetLuckyWeight { get; set; }
+
+
 
 
 
@@ -179,6 +183,18 @@ namespace Tasks
                 1.5f,
                 "Relative weight of this task. Be the very best. Like no one ever was."
                 );
+            FewestElitesWeight = config.Bind<float>(
+                "TaskWeights",
+                "FewestElites",
+                1.5f,
+                "Relative weight of this task."
+                );
+            GetLuckyWeight = config.Bind<float>(
+                "TaskWeights",
+                "GetLucky",
+                0.5f,
+                "Relative weight of this task."
+                );
         }
 
         public float GetTaskWeight(TaskType type)
@@ -244,6 +260,12 @@ namespace Tasks
 
                 case TaskType.VeryBest:
                     return VeryBestWeight.Value;
+
+                case TaskType.FewestElites:
+                    return FewestElitesWeight.Value;
+
+                case TaskType.GetLucky:
+                    return GetLuckyWeight.Value;
             }
             return 1;
         }

@@ -228,7 +228,7 @@ namespace Tasks
             // Update ConfigManaer with the new task (kinda optional. Won't break if you don't)
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[20];
+            taskCopies = new Task[22];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -250,6 +250,9 @@ namespace Tasks
             HealingItem task18 = new HealingItem();
             NoJump task19 = new NoJump();
             VeryBest task20 = new VeryBest();
+            FewestElites task21 = new FewestElites();
+            GetLucky task22 = new GetLucky();
+
             // Make the array bigger. Equal to whatever the last name is
 
             // -1 to ignore the base type
@@ -273,6 +276,10 @@ namespace Tasks
             taskCopies[(int)task18.type - 1] = task18;
             taskCopies[(int)task19.type - 1] = task19;
             taskCopies[(int)task20.type - 1] = task20;
+            taskCopies[(int)task21.type - 1] = task21;
+            taskCopies[(int)task22.type - 1] = task22;
+
+
 
 
 
@@ -521,7 +528,7 @@ namespace Tasks
                 // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
                 if (telePlaced)
                 {
-                    int numberOfStageTasks = 5;
+                    int numberOfStageTasks = totalNumPlayers + 2;// 5;
                     tasksUIObjects = new GameObject[numberOfStageTasks];
                     tasksUIRects = new RectTransform[numberOfStageTasks];
                     rivalTasksUIRects = new RectTransform[numberOfStageTasks];
@@ -1077,6 +1084,7 @@ namespace Tasks
 
                 List<TempItem> list = TempItemLists[i];
                 int count = 0;
+                int partials = 0; // temp items partially removed
                 //Chat.AddMessage($"List count: {list.Count}");
                 while(list.Count > 0)
                 {
@@ -1086,13 +1094,28 @@ namespace Tasks
                         Debug.Log("Oops. Infinite loop. Quitting remove temp items");
                         return;
                     }
-                        
-                    TempItem temp = list[0];
-                    //Chat.AddMessage($"Removing {temp.count} {temp.item:g}");
-                    // maybe I should do a chat message like when someone picks up an item
 
-                    playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, temp.count);
-                    list.RemoveAt(0);
+                    if (list.Count <= partials)
+                        break;
+                    TempItem temp = list[0+partials];
+
+                    int toRemove = Math.Min(temp.count, 3); // remove 3/5 unless they have less than 3
+                    temp.count -= toRemove; 
+                    TempItemLists[i][0 + partials] = temp;
+
+                    // maybe I should do a chat message like when someone picks up an item
+                    // don't really want to spam chat. Multiple players might be losing multiple different items.
+                    // could be local so you only see your own losses. That would be more work. This code runs on the server, not locally.
+                    Debug.Log($"Removing {toRemove} {temp.item:g}");
+                    playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, toRemove);
+                    if (temp.count <= 0)
+                    {
+                        list.RemoveAt(0);
+                    }
+                    else
+                    {
+                        partials++;
+                    }
                 }
             }
         }

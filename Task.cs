@@ -9,7 +9,7 @@ using UnityEngine;
 
 namespace Tasks
 {
-    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill, BabyDrone, Die, FindLockbox, HealingItem, NoJump, VeryBest };
+    public enum TaskType { Base, AirKills, DamageMultiple, DamageInTime, StayInAir, BiggestHit, MostDistance, PreonEvent, FarthestAway, FailShrine, OpenChests, StartTele, UsePrinters, OrderedSkills, BadSkill, BabyDrone, Die, FindLockbox, HealingItem, NoJump, VeryBest, FewestElites, GetLucky };
 
     // Put plugin here
     // C:\Program Files (x86)\Steam\steamapps\common\Risk of Rain 2\BepInEx\plugins\MyMods
