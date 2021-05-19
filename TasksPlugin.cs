@@ -16,6 +16,8 @@ using System.Collections.ObjectModel;
 using MiniRpcLib;
 using MiniRpcLib.Action;
 using UnityEngine.UI;
+using R2API.Networking;
+using R2API.Networking.Interfaces;
 
 // Networking stuff. Tutorials and examples
 // https://github.com/risk-of-thunder/R2Wiki/wiki/Networking-&-Multiplayer-mods-(MiniRPCLib)
@@ -26,7 +28,7 @@ namespace Tasks
 {
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency(MiniRpcPlugin.Dependency)]
-    [R2APISubmoduleDependency(nameof(ItemDropAPI))]
+    [R2APISubmoduleDependency(nameof(ItemDropAPI), nameof(NetworkingAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -77,6 +79,11 @@ namespace Tasks
 
         // Testing
         bool notifTestingFormat = true;
+
+        public TasksPlugin()
+        {
+            //SetupNetworking();
+        }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
@@ -141,6 +148,7 @@ namespace Tasks
             }
             if(Input.GetKeyDown(KeyCode.F5))
             {
+                // I can call this on the server to show on all players
                 ChatMessage.Send("Do I need to add this API? No. This should go to each player");
             }
             if(Input.GetKeyDown(KeyCode.F6))
@@ -170,14 +178,23 @@ namespace Tasks
             if(Input.GetKeyDown(KeyCode.F7))
             {
                 Chat.AddMessage("Pressed F7");
-                Chat.AddMessage($"Config: AirKills Weight: {ConfigManager.instance.GetTaskWeight(TaskType.AirKills)}");
-                Chat.AddMessage($"Config: AirKills Weight: {ConfigManager.instance.GetTaskWeight(TaskType.DamageMultiple)}");
+
             }
 
         }
 
         void GameSetup(Run run)
         {
+            // clients need these
+            totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
+            rewards = new Reward[totalNumTasks];
+
+            Debug.Log($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
+            totalNumPlayers = run.participatingPlayerCount;
+            playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
+
+            PopulatePlayerCharaterMasterList();
+
             // run.livingPlayerCount
             // run.participatingPlayerCount is this the total players?
             if (!NetworkServer.active)
@@ -188,15 +205,9 @@ namespace Tasks
 
             TaskSetup();
 
-            Debug.Log($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
-            totalNumPlayers = run.participatingPlayerCount;
-            playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
-
-            PopulatePlayerCharaterMasterList();
+            
             PopulateTempItemLists();
 
-            totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
-            rewards = new Reward[totalNumTasks];
 
             Debug.Log("ItemInventoryDisplay");
             // why did this used to work?
@@ -315,6 +326,13 @@ namespace Tasks
 
         void SetupNetworking()
         {
+            // new R2API networking API
+            NetworkingAPI.RegisterMessageType<SetupTaskMessage>();
+            NetworkingAPI.RegisterMessageType<TaskCompletionMessage>();
+            NetworkingAPI.RegisterMessageType<UpdateProgressMessage>();
+
+            
+            // Old miniRpc
             var miniRpc = MiniRpc.CreateInstance(GUID);
             taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
             {
@@ -354,6 +372,7 @@ namespace Tasks
                 UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
                 UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
             });
+            
         }
 
         void SetGameHooks()
@@ -526,23 +545,72 @@ namespace Tasks
                 panel = self.objectivePanelController;
                 // check if there is a tele
                 // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
+
+                int numberOfStageTasks = totalNumPlayers + 2;// 5;
+                tasksUIObjects = new GameObject[numberOfStageTasks];
+                tasksUIRects = new RectTransform[numberOfStageTasks];
+                rivalTasksUIRects = new RectTransform[numberOfStageTasks];
+                // telePlaced is false on the client so the client never created these ^ arrays
                 if (telePlaced)
                 {
-                    int numberOfStageTasks = totalNumPlayers + 2;// 5;
-                    tasksUIObjects = new GameObject[numberOfStageTasks];
-                    tasksUIRects = new RectTransform[numberOfStageTasks];
-                    rivalTasksUIRects = new RectTransform[numberOfStageTasks];
-
                     if (NetworkServer.active)
                         GenerateTasks(numberOfStageTasks);
                 }
             };
         }
 
+        public void SetupTasksClient(TaskInfo taskInfo)
+        {
+            //Debug.Log("SetupTasksClient");
+            if (currentTasks is null || currentTasks.Length != taskInfo.total)
+            {
+                currentTasks = new TaskInfo[taskInfo.total];
+            }
+
+            currentTasks[taskInfo.index] = taskInfo;
+            rewards[(int)taskInfo.taskType] = taskInfo.reward;
+
+            UpdateTasksUI(taskInfo.index);
+        }
+
+        public void TaskCompletionClient(int task, int playerNum)
+        {
+            // am I the player?
+            // instances.master should be the local player
+            // GetPlayer(num) should be the list of all players. Is the list in the same order for each client???
+            bool isWinner = PlayerCharacterMasterController.instances[0].master == GetPlayerCharacterMaster(playerNum);
+            // [Info   : Unity Log] Task 8 complete by player 1. Is it me? False
+            // should be true. Does that mean the player order is different?
+            // Should I send out the player order?
+            // or other info like netID?
+            Debug.Log($"Player {playerNum} won. I think I am player {GetPlayerNumber(PlayerCharacterMasterController.instances[0].master)}");
+            Debug.Log($"Task {(TaskType)task:g} complete by player {playerNum}. Is it me? {isWinner}");
+            if (isWinner)
+            {
+                CreateNotification(task);
+                OnPopup?.Invoke(task);
+            }
+            RemoveObjectivePanel(task);
+        }
+
+        public void UpdateProgressClient(ProgressInfo progressInfo, int playerNum)
+        {
+            bool isMe = PlayerCharacterMasterController.instances[0].master == GetPlayerCharacterMaster(playerNum);
+            //Debug.Log($"Update progress. Is me? {isMe}");
+            if (isMe)
+            {
+                bool playerLeading = progressInfo.GetMyProgress() > progressInfo.GetRivalProgress();
+                //Chat.AddMessage($"Updating {progressInfo.taskIndex} which is {currentTasks[progressInfo.taskIndex]}");
+                UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
+                UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
+            }
+        }
+
         void UpdateTasksUI(int taskIndex, string text = "")
         {
             if (tasksUIObjects[taskIndex] is null)
             {
+
                 tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
                 // rewards is totalNumTasks long
                 // taskIndex is like 9 at most.
@@ -555,6 +623,7 @@ namespace Tasks
                 {
                     itemIconPrefabCopy = FindObjectOfType<ItemInventoryDisplay>().itemIconPrefab;
                 }
+
                 ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
                 icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
 
@@ -576,12 +645,13 @@ namespace Tasks
                     checkRect.localScale = Vector3.one * 0.6f;
                     checkRect.localPosition += new Vector3(-5, -10, 0);
                     checkRect.SetAsLastSibling();
-                }               
+                }
 
-                if(rewards[rewardIndex].type == RewardType.Drone)
+                if (rewards[rewardIndex].type == RewardType.Drone)
                 {
                     string path = RewardBuilder.GetDroneTexturePath(rewards[rewardIndex].dronePath);
                     icon.image.texture = Resources.Load<Texture>(path);
+
                 }
             }
             tasksUIObjects[taskIndex].SetActive(true);
@@ -589,9 +659,11 @@ namespace Tasks
             TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[taskIndex].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
             if (textMeshLabel != null)
             {
+
                 textMeshLabel.text = (text == "") ? currentTasks[taskIndex].description : text;
             }
-            
+
+            //Debug.Log("Trying to create progress bars");
             tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
             rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
             
@@ -760,12 +832,15 @@ namespace Tasks
                     {
                         TaskInfo info = new TaskInfo(taskIDNumbers[j], GetTaskDescription(taskIDNumbers[j]), false, j, taskIDNumbers.Length, rewards[taskIDNumbers[j]]);
                         updateTaskClient?.Invoke(info, NetworkUser.readOnlyInstancesList[i]);
+                        //new SetupTaskMessage(info).Send(NetworkDestination.Clients);
                     }
                 }
                 else
                 {
                     Debug.Log("No network users");
                 }
+                //break; // testing NEtworkingAPI. I think it sends to all clients at once, not one at a time so don't need the loop
+
             }
         }
 
@@ -939,8 +1014,15 @@ namespace Tasks
                 return;
             GiveReward(taskType, playerNum);
 
+            // NetworkingAPI version
+            // but this sends to all clients, doesn't it?
+            //new TaskCompletionMessage((int)taskType, playerNum).Send(NetworkDestination.Clients);
+
+            // old miniRPC version
+            
             taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
             taskEndedClient.Invoke((int)taskType); // hope this sends to everyone
+            
         }
 
         void UpdateTaskProgress(TaskType taskType, float[] progress)
@@ -974,6 +1056,7 @@ namespace Tasks
                 if (NetworkUser.readOnlyInstancesList is null || NetworkUser.readOnlyInstancesList.Count <= i)
                     return;
                 updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
+                //new UpdateProgressMessage(p, i).Send(NetworkDestination.Clients);
             }
         }
 
@@ -1159,105 +1242,9 @@ namespace Tasks
             }
         }
 
-        public class ProgressInfo : MessageBase
-        {
-            public int taskIndex;
-            int myProgress;
-            int rivalProgress;
+        
 
-            public ProgressInfo(int _taskIndex, float _myProgress, float _rivalProgress)
-            {
-                taskIndex = _taskIndex;
-                // can't serialize floats (or I don't know how)
-                // so just convert from 0.0->1.0 to 00 to 10
-                // Lose most decimal places, but didn't need them anyway
-                myProgress = (int)(_myProgress * 10);
-                rivalProgress = (int)(_rivalProgress * 10);
-            }
-
-            public float GetMyProgress()
-            {
-                // convert back to floats
-                return myProgress / 10f;
-            }
-
-            public float GetRivalProgress()
-            {
-                return rivalProgress / 10f;
-            }
-
-            public override void Serialize(NetworkWriter writer)
-            {
-                writer.Write(taskIndex);
-                writer.Write(myProgress);
-                writer.Write(rivalProgress);
-            }
-
-            public override void Deserialize(NetworkReader reader)
-            {
-                taskIndex = reader.ReadInt32();
-                myProgress = reader.ReadInt32();
-                rivalProgress = reader.ReadInt32();
-            }
-        }
-
-        public class TaskInfo : MessageBase
-        {
-            public int taskType;
-            public string description;
-            public bool completed;
-            public int index;
-            public int total;
-            public Reward reward;
-
-            public override void Serialize(NetworkWriter writer)
-            {
-                writer.Write(taskType);
-                writer.Write(description);
-                writer.Write(completed);
-                writer.Write(index);
-                writer.Write(total);
-
-                writer.Write((int)reward.type);
-                writer.Write(reward.item.value);
-                writer.Write(reward.numItems);
-                writer.Write(reward.temporary);
-                writer.Write(reward.gold);
-                writer.Write(reward.xp);
-                writer.Write(reward.dronePath);
-            }
-
-            public override void Deserialize(NetworkReader reader)
-            {
-                taskType = reader.ReadInt32();
-                description = reader.ReadString();
-                completed = reader.ReadBoolean();
-                index = reader.ReadInt32();
-                total = reader.ReadInt32();
-
-                int type = reader.ReadInt32();
-                int item = reader.ReadInt32();
-                int numItems = reader.ReadInt32();
-                bool temp = reader.ReadBoolean();
-                int gold = reader.ReadInt32();
-                int xp = reader.ReadInt32();
-                string path = reader.ReadString();
-
-                PickupIndex p = new PickupIndex(item);
-                reward = new Reward((RewardType)type, p, numItems, temp, gold, xp, path);
-            }
-            public TaskInfo(int _type, string _description, bool _completed, int _index, int _total, Reward _reward)
-            {
-                taskType = _type;
-                description = _description;
-                completed = _completed;
-                index = _index;
-                total = _total;
-                reward = _reward;
-            }
-
-            public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
-        }
+        
     }
     
 

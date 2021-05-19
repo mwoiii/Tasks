@@ -139,7 +139,7 @@ namespace Tasks
                     mostDist = dist;
                     winner = i;
                 }
-                Chat.AddMessage($"FarthestAway({i}): {startPositions[i]} -> {endPos} = {dist}. Winner: {winner} with {mostDist}");
+                //Chat.AddMessage($"FarthestAway({i}): {startPositions[i]} -> {endPos} = {dist}. Winner: {winner} with {mostDist}");
             }
 
             CompleteTask(winner);
