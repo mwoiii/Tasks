@@ -224,10 +224,10 @@ namespace Tasks
             // Create a new object, add it to the array
             // add a new type to the TaskType enum in Task.cs
             // update the type in the class you made
-            // Update ConfigManaer with the new task (kinda optional. Won't break if you don't)
+            // Update ConfigManager with the new task (kinda optional. Won't break if you don't)
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[22];
+            taskCopies = new Task[24];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -251,6 +251,8 @@ namespace Tasks
             VeryBest task20 = new VeryBest();
             FewestElites task21 = new FewestElites();
             GetLucky task22 = new GetLucky();
+            GetLow task23 = new GetLow();
+            KillStreak task24 = new KillStreak();
 
             // Make the array bigger. Equal to whatever the last name is
 
@@ -277,6 +279,10 @@ namespace Tasks
             taskCopies[(int)task20.type - 1] = task20;
             taskCopies[(int)task21.type - 1] = task21;
             taskCopies[(int)task22.type - 1] = task22;
+            taskCopies[(int)task23.type - 1] = task23;
+            taskCopies[(int)task24.type - 1] = task24;
+
+
 
 
             // Can I do something like this?
@@ -502,7 +508,7 @@ namespace Tasks
                 // check if there is a tele
                 // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
 
-                int numberOfStageTasks = totalNumPlayers + 2;// 5;
+                int numberOfStageTasks = ConfigManager.instance.GetNumberOfTasks(totalNumPlayers);// totalNumPlayers + 2;// 5;
                 tasksUIObjects = new GameObject[numberOfStageTasks];
                 tasksUIRects = new RectTransform[numberOfStageTasks];
                 rivalTasksUIRects = new RectTransform[numberOfStageTasks];
@@ -941,7 +947,7 @@ namespace Tasks
                         rival = progress[j];
                     }
                 }
-                ProgressInfo p = new ProgressInfo(taskIndex, myProgress, rival);
+                ProgressInfo p = new ProgressInfo(taskIndex, Mathf.Clamp01(myProgress), Mathf.Clamp01(rival));
                 if (NetworkUser.readOnlyInstancesList is null || NetworkUser.readOnlyInstancesList.Count <= i)
                     return;
                 updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);

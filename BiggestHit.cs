@@ -9,25 +9,10 @@ namespace Tasks
     class BiggestHit : Task
     {
         protected new string description { get; } = "Biggest hit wins";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_BIGGEST_HIT_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_BIGGEST_HIT_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.BiggestHit;
         protected override string name { get; } = "Biggest Hit";
 
-        // by it's nature, this task gets triggered at the end.
-        // How can I make it not give out temp items that will just get removed?
-        // maybe they are granted for the next map?
-        // as it is, end of game is called after remove temp items
-        // so it should just grant them for the next stage
-        // ya, it does work like that. You lose the items at the end of the next stage
 
         // This task doesn't actually make much sense. Most abilitites do a set amount of damage.
         // Whomever has the biggest ability wins every time

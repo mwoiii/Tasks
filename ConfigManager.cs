@@ -12,6 +12,10 @@ namespace Tasks
 
         ConfigFile config;
 
+        public static ConfigEntry<int> TasksPerPlayer { get; set; }
+        public static ConfigEntry<int> AdditionalTasks { get; set; }
+
+
         public static ConfigEntry<float> AirKillsWeight { get; set; }
         public static ConfigEntry<float> DamageMultipleWeight { get; set; }
         public static ConfigEntry<float> DamageInTimeWeight { get; set; }
@@ -34,6 +38,10 @@ namespace Tasks
         public static ConfigEntry<float> VeryBestWeight { get; set; }
         public static ConfigEntry<float> FewestElitesWeight { get; set; }
         public static ConfigEntry<float> GetLuckyWeight { get; set; }
+        public static ConfigEntry<float> GetLowWeight { get; set; }
+        public static ConfigEntry<float> KillStreakWeight { get; set; }
+
+
 
 
 
@@ -63,6 +71,19 @@ namespace Tasks
         
         void SetupWeights()
         {
+            TasksPerPlayer = config.Bind<int>(
+                "TaskOptions",
+                "TasksPerPlayer",
+                1,
+                "Number of tasks per player. Number of tasks: (TasksPerPlayer * number of player) + AdditionalTasks"
+                );
+            AdditionalTasks = config.Bind<int>(
+                "TaskOptions",
+                "AdditionalTasks",
+                2,
+                "Extra tasks. Number of tasks: (TasksPerPlayer * number of player) + AdditionalTasks"
+                );
+
             AirKillsWeight = config.Bind<float>(
                 "TaskWeights",
                 "AirKills",
@@ -139,7 +160,7 @@ namespace Tasks
                 "TaskWeights",
                 "OrderedSkills",
                 0.0f,
-                "Relative weight of this task. This task sucks"
+                "Relative weight of this task. Use abilities in left-to-right order. This task sucks."
                 );
             BadSkillWeight = config.Bind<float>(
                 "TaskWeights",
@@ -193,6 +214,18 @@ namespace Tasks
                 "TaskWeights",
                 "GetLucky",
                 0.5f,
+                "Relative weight of this task."
+                );
+            GetLowWeight = config.Bind<float>(
+                "TaskWeights",
+                "GetLow",
+                1.5f,
+                "Relative weight of this task."
+                );
+            KillStreakWeight = config.Bind<float>(
+                "TaskWeights",
+                "KillStreaks",
+                1.5f,
                 "Relative weight of this task."
                 );
         }
@@ -266,8 +299,19 @@ namespace Tasks
 
                 case TaskType.GetLucky:
                     return GetLuckyWeight.Value;
+
+                case TaskType.GetLow:
+                    return GetLowWeight.Value;
+
+                case TaskType.KillStreak:
+                    return KillStreakWeight.Value;
             }
             return 1;
+        }
+
+        public int GetNumberOfTasks(int numPlayers)
+        {
+            return numPlayers * TasksPerPlayer.Value + AdditionalTasks.Value;
         }
     }
 }
