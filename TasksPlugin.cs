@@ -227,7 +227,7 @@ namespace Tasks
             // Update ConfigManager with the new task (kinda optional. Won't break if you don't)
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[24];
+            taskCopies = new Task[25];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -253,6 +253,7 @@ namespace Tasks
             GetLucky task22 = new GetLucky();
             GetLow task23 = new GetLow();
             KillStreak task24 = new KillStreak();
+            QuickDraw task25 = new QuickDraw();
 
             // Make the array bigger. Equal to whatever the last name is
 
@@ -281,6 +282,8 @@ namespace Tasks
             taskCopies[(int)task22.type - 1] = task22;
             taskCopies[(int)task23.type - 1] = task23;
             taskCopies[(int)task24.type - 1] = task24;
+            taskCopies[(int)task25.type - 1] = task25;
+
 
 
 
@@ -509,6 +512,11 @@ namespace Tasks
                 // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
 
                 int numberOfStageTasks = ConfigManager.instance.GetNumberOfTasks(totalNumPlayers);// totalNumPlayers + 2;// 5;
+                // hard cap.
+                // could be 7/8-12. The 8th or 9th task can overlap the press e to open chest UI
+                // around 12, it will start to overlap your abilities
+                numberOfStageTasks = Math.Min(numberOfStageTasks, 7);
+
                 tasksUIObjects = new GameObject[numberOfStageTasks];
                 tasksUIRects = new RectTransform[numberOfStageTasks];
                 rivalTasksUIRects = new RectTransform[numberOfStageTasks];
@@ -646,11 +654,16 @@ namespace Tasks
         /// <param name="percent01">Percent complete between 0 and 1</param>
         void UpdateProgress(RectTransform rect, float percent01)
         {
-            if(rect is null)
+            if(rect is null || rect.sizeDelta == null)
             {
                 Debug.Log("Rect was null");
                 return;
             }
+            // rect can be non null, but then sizeDelta is null??
+            // not sure if rect.size == null will help or if that will just push the issue elsewhere
+            // still have the error with it
+            // the null is triggered when quitting the game. And new games seem to work so it's low priority
+            // correction: unhooks get broken
             rect.sizeDelta = new Vector2(percent01 * 113, 3); // 113 just looks about right
         }
 

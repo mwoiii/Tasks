@@ -56,16 +56,26 @@ namespace Tasks
 
         void OnDamage(DamageReport report)
         {
-
             if (report.victimMaster.playerCharacterMasterController is null) return;
 
             // any damage ends your streak
             // TODO: ignore fall damage?
             // TODO: ignore self damage (REX). does vicitm == attacker work?
             // you got hit
+            //Debug.Log($"KillStreak. Fall damage? {report.isFallDamage}");
+            
+            // self damage
+            // victim == attacker doesn't work
+            if (report.victimMaster == report.attackerMaster)
+            {
+                // fall damage isn't self damage
+                // REX damage also isn't self damage. Dunno how to figure that out. friendly fire?
+                Debug.Log($"KillStreak. Self damage ignore."); 
+                return;
+            }
             int playerNum = TasksPlugin.GetPlayerNumber(report.victimMaster);
 
-            if (playerNum > 0)
+            if (playerNum > -1)
             {
                 //UpdateStreaks(playerNum);
                 Debug.Log($"Hit. Resetting streak for P{playerNum}");
@@ -78,7 +88,7 @@ namespace Tasks
             if (report.attackerMaster.playerCharacterMasterController is null) return;
             int playerNum = TasksPlugin.GetPlayerNumber(report.attackerMaster);
 
-            if (playerNum > 0)
+            if (playerNum > -1) // whoops. was > 0 so player 0 could never win lol
             {
                 currentStreaks[playerNum]++;
                 UpdateStreaks(playerNum);

@@ -40,6 +40,8 @@ namespace Tasks
         public static ConfigEntry<float> GetLuckyWeight { get; set; }
         public static ConfigEntry<float> GetLowWeight { get; set; }
         public static ConfigEntry<float> KillStreakWeight { get; set; }
+        public static ConfigEntry<float> QuickDrawWeight { get; set; }
+
 
 
 
@@ -228,6 +230,12 @@ namespace Tasks
                 1.5f,
                 "Relative weight of this task."
                 );
+            QuickDrawWeight = config.Bind<float>(
+                "TaskWeights",
+                "QuickDraw",
+                1.5f,
+                "Relative weight of this task. Kill somehting that spawned 3s ago"
+                );
         }
 
         public float GetTaskWeight(TaskType type)
@@ -305,6 +313,9 @@ namespace Tasks
 
                 case TaskType.KillStreak:
                     return KillStreakWeight.Value;
+
+                case TaskType.QuickDraw:
+                    return QuickDrawWeight.Value;
             }
             return 1;
         }
