@@ -935,6 +935,10 @@ namespace Tasks
 
         void UpdateTaskProgress(TaskType taskType, float[] progress)
         {
+            if (!NetworkServer.active)
+            {
+                Debug.Log("Server no longer active. Not gonna update progress");
+            }
             if (stageStartTasks is null || progress is null)
                 return;
             int taskIndex = 0;
@@ -955,7 +959,7 @@ namespace Tasks
                 {
                     if (j == i)
                         break;
-                    if(progress[j] > rival)
+                    if (progress[j] > rival)
                     {
                         rival = progress[j];
                     }
@@ -963,7 +967,9 @@ namespace Tasks
                 ProgressInfo p = new ProgressInfo(taskIndex, Mathf.Clamp01(myProgress), Mathf.Clamp01(rival));
                 if (NetworkUser.readOnlyInstancesList is null || NetworkUser.readOnlyInstancesList.Count <= i)
                     return;
+
                 updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
+
                 //new UpdateProgressMessage(p, i).Send(NetworkDestination.Clients);
             }
         }

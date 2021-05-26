@@ -48,6 +48,8 @@ namespace Tasks
         protected int totalNumberPlayers;
         protected float[] progress;
 
+        bool taskActive = false;
+
         public Task()
         {
             OnInstall();
@@ -140,7 +142,16 @@ namespace Tasks
                 {
                     progress[i] = 0;
                 }
-                OnUpdateProgress?.Invoke(type, progress);
+                // has the task ended? like when you quit the game?
+                if (taskActive)
+                {
+                    OnUpdateProgress?.Invoke(type, progress);
+                }
+                else
+                {
+                    // I couldn't get this to run. Maybe this wasn't the issue?
+                    Debug.Log($"{type:g} was inactive. Don't update progress");
+                }
             }
         }
 
@@ -172,6 +183,7 @@ namespace Tasks
                 totalNumberPlayers = numPlayers;
                 progress = new float[numPlayers];
                 SetHooks(numPlayers);
+                taskActive = true;
             }
         }
 
@@ -179,6 +191,7 @@ namespace Tasks
         {
             if(id == (int)type || id < 0)
             {
+                taskActive = false;
                 Unhook();
             }
         }
@@ -195,6 +208,9 @@ namespace Tasks
         {
             // -= whatever you hooked in setHooks
             // or else next time you activate this task, those hooks will get called twice
+            // this gets called by tasks that don't have an 'active' field (some don't need it) when you leave the game
+            // and it gets called when you complete the task
+            //Debug.Log($"Unhooked {type:g}");
         }
 
         void RunOver(Run run)

@@ -66,10 +66,13 @@ namespace Tasks
             
             // self damage
             // victim == attacker doesn't work
-            if (report.victimMaster == report.attackerMaster)
+            // this might be unique to self damage
+            // what else would have null attacker?
+            // other maybe unique stuff: 
+            // nonLethal, inflicter = null, proc = 0
+            if (report.damageInfo.attacker is null)
             {
                 // fall damage isn't self damage
-                // REX damage also isn't self damage. Dunno how to figure that out. friendly fire?
                 Debug.Log($"KillStreak. Self damage ignore."); 
                 return;
             }
@@ -78,7 +81,7 @@ namespace Tasks
             if (playerNum > -1)
             {
                 //UpdateStreaks(playerNum);
-                Debug.Log($"Hit. Resetting streak for P{playerNum}");
+                //Debug.Log($"Hit. Resetting streak for P{playerNum}");
                 currentStreaks[playerNum] = 0;
             }
         }
