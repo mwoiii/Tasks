@@ -70,7 +70,7 @@ namespace Tasks
             // what else would have null attacker?
             // other maybe unique stuff: 
             // nonLethal, inflicter = null, proc = 0
-            if (report.damageInfo.attacker is null)
+            if (report.damageInfo.attacker is null && !report.isFallDamage)
             {
                 // fall damage isn't self damage
                 Debug.Log($"KillStreak. Self damage ignore."); 
