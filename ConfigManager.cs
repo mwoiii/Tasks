@@ -41,6 +41,8 @@ namespace Tasks
         public static ConfigEntry<float> GetLowWeight { get; set; }
         public static ConfigEntry<float> KillStreakWeight { get; set; }
         public static ConfigEntry<float> QuickDrawWeight { get; set; }
+        public static ConfigEntry<float> FarKillWeight { get; set; }
+
 
 
 
@@ -234,7 +236,13 @@ namespace Tasks
                 "TaskWeights",
                 "QuickDraw",
                 1.5f,
-                "Relative weight of this task. Kill somehting that spawned 3s ago"
+                "Relative weight of this task. Kill something that spawned 3s ago"
+                );
+            FarKillWeight = config.Bind<float>(
+                "TaskWeights",
+                "FarKill",
+                1.0f,
+                "Relative weight of this task. Kill something far away from where you last lef the ground"
                 );
         }
 
@@ -316,6 +324,9 @@ namespace Tasks
 
                 case TaskType.QuickDraw:
                     return QuickDrawWeight.Value;
+
+                case TaskType.FarKill:
+                    return FarKillWeight.Value;
             }
             return 1;
         }
