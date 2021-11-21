@@ -26,21 +26,9 @@ namespace Tasks
         protected static string thisClass = "BASE_TASK_";
         protected string description { get; } = "Base description";
 
-        /*
-        public override string AchievementIdentifier { get; } = myName + myMod + thisClass + "ACHIEVEMENT_ID";
-        public override string UnlockableIdentifier { get; } = myName + myMod + thisClass + "REWARD_ID";
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = myName + myMod + thisClass + "PREREQUISITE_ID";
-        public override string AchievementNameToken { get; } = myName + myMod + thisClass + "ACHIEVEMENT_NAME"; // plain English
-        public override string AchievementDescToken { get; } = myName + myMod + thisClass + "ACHIEVEMENT_DESC"; // plain English
-        public override string UnlockableNameToken { get; } = myName + myMod + thisClass + "UNLOCKABLE_NAME"; // plain English
-        protected override VanillaSpriteProvider SpriteProvider { get; } = new VanillaSpriteProvider("VANILLA PATH");
-        */
-
-        //protected virtual int _id { get;} = 0;
         public virtual TaskType type { get; } = TaskType.Base;
         protected virtual string name { get; } = "Base Task";
-        public static event Action<TaskType, int> OnCompletion;
+        public static event Action<TaskType, int, string> OnCompletion;
         public static event Action<TaskType, float[]> OnUpdateProgress;
 
         //UserProfile profile;
@@ -91,6 +79,7 @@ namespace Tasks
             
             TasksPlugin.OnActivate += this.Activate;
             TasksPlugin.OnDeactivate += this.Deactivate;
+            TasksPlugin.OnCancelAll += this.CancelAllTasks;
         }
 
         virtual public void OnUninstall()
@@ -107,6 +96,7 @@ namespace Tasks
 
             TasksPlugin.OnActivate -= this.Activate;
             TasksPlugin.OnDeactivate -= this.Deactivate;
+            TasksPlugin.OnCancelAll -= this.CancelAllTasks;
 
             // Gets called automatically when I set granted to true
             // but I don't do that because
@@ -155,6 +145,27 @@ namespace Tasks
             }
         }
 
+        public virtual string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {name}";
+        }
+
+        protected string GetStylizedName(int playerNum)
+        {
+            return $"<color=#ffffff>{TasksPlugin.GetPlayerName(playerNum)}</color>";
+        }
+
+        protected string GetStylizedTaskName(string taskName)
+        {
+            return $"<style=cIsUtility>{taskName}</style>"; // utility is light blue
+        }
+
+        protected string GetStylizedTaskWinStat(string stat)
+        {
+            // whatever the task tracks like kills or time
+            return $"<style=cIsUtility>{stat}</style>";
+        }
+
         virtual protected void CompleteTask(int playerNum)
         {
             //ShowPopup();
@@ -162,7 +173,7 @@ namespace Tasks
             // send message to server
             // id is this task
             // netId is the player
-            OnCompletion?.Invoke(type, playerNum);
+            OnCompletion?.Invoke(type, playerNum, GetWinMessage(playerNum));
         }
 
         virtual protected bool IsComplete(int playerNum)
@@ -192,9 +203,22 @@ namespace Tasks
             if(id == (int)type || id < 0)
             {
                 taskActive = false;
+                StageEnd();
                 Unhook();
             }
         }
+
+        public void CancelAllTasks()
+        {
+            taskActive = false;
+            Unhook();
+        }
+
+        protected virtual void StageEnd()
+        {
+
+        }
+
         protected virtual void SetHooks(int numPlayers)
         {
             // Setup achievement-specific hooks
@@ -215,6 +239,9 @@ namespace Tasks
 
         void RunOver(Run run)
         {
+            // runs when you get to the stats screen and press the button to continue
+            // and when you quit to main menu from the pause menu
+            //Debug.Log($"Task.RunOver {name}");
             Unhook();
 
             OnUninstall();

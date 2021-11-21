@@ -29,6 +29,11 @@ namespace Tasks
             return description;
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by opening {GetStylizedTaskWinStat(numToOpen.ToString())} chests first.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set Hooks in OpenChests. {numPlayers} players");

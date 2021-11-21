@@ -32,6 +32,11 @@ namespace Tasks
             return $"Stay in the air for {Math.Round(timeToStayInAir, 1)} seconds";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by staying in the air for {GetStylizedTaskWinStat(timeToStayInAir.ToString())}s.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set Hooks in Stay Airborne. {numPlayers} players");

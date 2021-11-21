@@ -18,6 +18,11 @@ namespace Tasks
             return "Find a healing item";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by finding a {GetStylizedTaskWinStat("healing")} item first.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set Hooks in HealingItem. {numPlayers} players");

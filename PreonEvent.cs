@@ -9,23 +9,12 @@ namespace Tasks
     class PreonEvent : Task
     {
         protected new string description { get; } = "Most Preon kills wins";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_PREON_EVENT_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_PREON_EVENT_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_PREON_EVENT_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.PreonEvent;
         protected override string name { get; } = "Preon Event";
 
 
         int[] kills;
-        bool active;
-
         int preonIndex = -1;
 
         public override bool CanActivate(int numPlayers)
@@ -38,58 +27,43 @@ namespace Tasks
             return description;
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by getting {GetStylizedTaskWinStat(kills[winningPlayer].ToString())} kills with the Preon Accumulator.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             UnityEngine.Debug.Log($"Set Hooks in PreonEvent. {numPlayers} players");
 
             base.SetHooks(numPlayers);
 
-            //ProjectileCatalog.GetProjectilePrefab(0).projectileNames
-            //ClassicStageInfo s = new ClassicStageInfo();
-            //var thing = s.GetFieldValue<string>("someString");
-
-            /*
-            string[] names;
-            // This is how you access a private static array in a static class
-            names = typeof(ProjectileCatalog).GetFieldValue<string[]>("projectileNames");
-            if (names != null)
-            {
-                for (int i = 0; i < names.Length; i++)
-                {
-                    Chat.AddMessage(names[i]);
-                }
-            }
-            */
-
             preonIndex = ProjectileCatalog.FindProjectileIndex("BeamSphere");
 
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
-            //GlobalEventManager.onServerDamageDealt += OnDamage;
 
             if (kills is null || kills.Length != numPlayers)
             {
                 kills = new int[numPlayers];
             }
             Reset();
-            active = true;
 
             TasksPlugin.StartPreonEvent();
         }
 
-        protected override void Unhook()
+        protected override void StageEnd()
         {
-            if (!active)
-                return;
-            active = false;
+            base.StageEnd();
 
             Evaluate();
-
-            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-            //GlobalEventManager.onServerDamageDealt -= OnDamage;
-
+            // seems like an unhook, but if everyone is dead, it doesn't need to run so it's w/e
             TasksPlugin.EndPreonEvent();
-
             Reset();
+        }
+
+        protected override void Unhook()
+        {
+            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
 
             base.Unhook();
         }

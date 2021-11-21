@@ -16,6 +16,11 @@ namespace Tasks
             return "Kill an enemy within 3s of spawning."; // reword this?
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by killing an enemy within {GetStylizedTaskWinStat("3")}s of spawning.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set Hooks in KillStreak. {numPlayers} players");

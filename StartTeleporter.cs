@@ -9,16 +9,7 @@ namespace Tasks
     class StartTeleporter : Task
     {
         protected new string description { get; } = "Better be First";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_ACTIVATE_TELE_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_ACTIVATE_TELE_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_ACTIVATE_TELE_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.StartTele;
         protected override string name { get; } = "Activate the Teleporter";
 
@@ -30,6 +21,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return description;
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by triggering the {GetStylizedTaskWinStat("teleporter")} first.";
         }
 
         protected override void SetHooks(int numPlayers)

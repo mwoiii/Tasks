@@ -65,6 +65,12 @@ namespace Tasks
             {
                 CompleteTask(playerNum);
             }
+            else
+            {
+                // updateUI(dist/distance)
+                // probably most recent is best
+                // don't care about best
+            }
         }
 
         IEnumerator CalculatePositions()

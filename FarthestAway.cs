@@ -10,21 +10,16 @@ namespace Tasks
     class FarthestAway : Task
     {
         protected new string description { get; } = "Farthest away in 20s wins";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_FARTHEST_AWAY_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.FarthestAway;
         protected override string name { get; } = "Farthest From Spawn";
 
         Vector3[] startPositions;
         bool active = false;
+
+        IEnumerator timerRoutine;
+
+        float winnerDist = 0;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -34,6 +29,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return description;
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by being {GetStylizedTaskWinStat(winnerDist.ToString())}m away in 20 seconds.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -50,6 +50,7 @@ namespace Tasks
 
             for (int i = 0; i < startPositions.Length; i++)
             {
+                // probably broken if one player DCs
                 startPositions[i] = TasksPlugin.GetPlayerCharacterMaster(i).GetBody().transform.position;
 
                 // are they up in the air?
@@ -59,7 +60,8 @@ namespace Tasks
                 // FarthestAway(0): (229.0, 30.2, -64.3) -> (44.0, 3.8, -34.2) = 189.251. snow map
             }
 
-            TasksPlugin.instance.StartCoroutine(EndTask());
+            timerRoutine = EndTask();
+            TasksPlugin.instance.StartCoroutine(timerRoutine);
             active = true;
         }
 
@@ -67,8 +69,14 @@ namespace Tasks
         {
             if (!active)
                 return;
-            active = false;
-
+            active = false; // can probably delete this. Shouldn't matter if stopCo runs twice
+            // but I don't know what happens if unhook runs before setHooks
+            // i.e. what if timerRoutine == null?
+            // maybe this is safe enough?
+            if (timerRoutine != null)
+            {
+                TasksPlugin.instance.StopCoroutine(timerRoutine);
+            }
 
             base.Unhook();
         }
@@ -79,7 +87,7 @@ namespace Tasks
             // or I could have that AND show the relative difference between the players.
             // but then I would have to calculate distance every second. Which isn't that big of a deal
             // I think the task would feel better with the progress to see if you're winning or it's close, etc.
-            // isntead of two players having different intensity. One is super try hard bc he thinks the other is right on his heels and everyone else is not trying
+            // instead of two players having different intensity. One is super try hard bc he thinks the other is right on his heels and everyone else is not trying
             float[] currentDist = new float[startPositions.Length];
             float maxDist = 0;
             
@@ -141,7 +149,7 @@ namespace Tasks
                 }
                 //Chat.AddMessage($"FarthestAway({i}): {startPositions[i]} -> {endPos} = {dist}. Winner: {winner} with {mostDist}");
             }
-
+            winnerDist = mostDist;
             CompleteTask(winner);
             ResetProgress();
         }

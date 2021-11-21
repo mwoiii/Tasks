@@ -19,6 +19,11 @@ namespace Tasks
             return "Die";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by dying first. Congratulations.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             base.SetHooks(numPlayers);

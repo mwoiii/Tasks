@@ -9,16 +9,7 @@ namespace Tasks
     class UsePrinters : Task
     {
         protected new string description { get; } = "Use 2 Different 3D Printers";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_USE_PRINTERS_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_USE_PRINTERS_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.UsePrinters;
         protected override string name { get; } = "Use Printers";
 
@@ -29,6 +20,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return description;
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by using {GetStylizedTaskWinStat(numToUse.ToString())} different 3D printers first.";
         }
 
         protected override void SetHooks(int numPlayers)

@@ -17,7 +17,6 @@ namespace Tasks
 
         bool[] playerFailed;
         int numPlayersFailed;
-        bool active;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -29,6 +28,11 @@ namespace Tasks
             return "Keep your drone alive";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} kept their drone alive the longest. Completed {GetStylizedTaskName(name)}.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set Hooks in BabyDrone. {numPlayers} players");
@@ -37,7 +41,6 @@ namespace Tasks
             drones = new CharacterMaster[numPlayers];
             playerFailed = new bool[numPlayers];
             numPlayersFailed = 0;
-            active = true;
 
             for (int i = 0; i < numPlayers; i++)
             {
@@ -49,30 +52,36 @@ namespace Tasks
             GlobalEventManager.onCharacterDeathGlobal += OnKill;
         }
 
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+
+            Evaluate();
+
+            ResetProgress();
+        }
+
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            active = false;
+            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
 
+            base.Unhook();
+        }
+
+        void Evaluate()
+        {
             // end of stage. Are there multiple winners?
-            if(totalNumberPlayers-numPlayersFailed > 1)
+            if (totalNumberPlayers - numPlayersFailed > 1)
             {
                 for (int i = 0; i < playerFailed.Length; i++)
                 {
-                    if(!playerFailed[i])
+                    if (!playerFailed[i])
                     {
                         UpdateProgressMultiWinner();
                         CompleteTask(i);
                     }
                 }
             }
-
-            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-
-
-            ResetProgress();
-            base.Unhook();
         }
 
         void UpdateProgress()

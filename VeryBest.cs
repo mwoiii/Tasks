@@ -12,7 +12,6 @@ namespace Tasks
         public override TaskType type { get; } = TaskType.VeryBest;
 
         HashSet<string>[] mobNames;
-        bool active = false;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -22,6 +21,12 @@ namespace Tasks
         public override string GetDescription()
         {
             return "Be the very best. Like no one ever was.";
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            int count = mobNames[winningPlayer].Count;
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by killing the most({GetStylizedTaskWinStat(count.ToString())}) unique mobs.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -38,20 +43,20 @@ namespace Tasks
             }
 
             ResetProgress();
-            active = true;
         }
 
-        protected override void Unhook()
+        protected override void StageEnd()
         {
-            if (!active)
-                return;
-            active = false;
+            base.StageEnd();
 
             Evaluate();
 
-            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-
             Reset();
+        }
+        protected override void Unhook()
+        {
+
+            GlobalEventManager.onCharacterDeathGlobal -= OnKill;
 
             base.Unhook();
         }

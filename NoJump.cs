@@ -13,11 +13,15 @@ namespace Tasks
 
         bool[] playerFailed;
         int numPlayersFailed;
-        bool active = false;
 
         public override string GetDescription()
         {
             return "Don't jump";
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by being the last to jump.";
         }
 
         public override bool CanActivate(int numPlayers)
@@ -31,8 +35,7 @@ namespace Tasks
             base.SetHooks(numPlayers);
 
             playerFailed = new bool[numPlayers];
-            active = true;
-            ResetAll();
+            Reset();
 
             // don't seem to exist
             //On.RoR2.CharacterMotor.Jump +=
@@ -41,29 +44,35 @@ namespace Tasks
             On.EntityStates.GenericCharacterMain.ApplyJumpVelocity += OnJump;
         }
 
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+
+            Evaluate();
+            Reset();
+        }
+
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            active = false;
+            On.EntityStates.GenericCharacterMain.ApplyJumpVelocity -= OnJump;
 
+            base.Unhook();
+        }
+
+        void Evaluate()
+        {
             // reward anyone left
-            if(totalNumberPlayers-numPlayersFailed > 1)
+            if (totalNumberPlayers - numPlayersFailed > 1)
             {
                 for (int i = 0; i < playerFailed.Length; i++)
                 {
-                    if(!playerFailed[i])
+                    if (!playerFailed[i])
                     {
                         UpdateProgressMultiWinner();
                         CompleteTask(i);
                     }
                 }
             }
-
-            On.EntityStates.GenericCharacterMain.ApplyJumpVelocity -= OnJump;
-            ResetAll();
-
-            base.Unhook();
         }
 
         void UpdateProgress()
@@ -123,7 +132,7 @@ namespace Tasks
             }
         }
 
-        void ResetAll()
+        void Reset()
         {
             if (playerFailed is null)
                 return;

@@ -8,16 +8,7 @@ namespace Tasks
     class OrderedSkills : Task
     {
         protected new string description { get; } = "Use skills in order";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_ORDERED_SKILLS_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_ORDERED_SKILLS_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_ORDERED_SKILLS_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.OrderedSkills;
         protected override string name { get; } = "Ordered Skills";
 
@@ -29,6 +20,11 @@ namespace Tasks
             return description;
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by using their abilities in order.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             UnityEngine.Debug.Log($"Set Hooks in OrderedSkills. {numPlayers} players");
@@ -37,7 +33,7 @@ namespace Tasks
 
             order = new SkillSlot[] { SkillSlot.Primary, SkillSlot.Secondary, SkillSlot.Utility, SkillSlot.Special};
             whereInOrder = new int[numPlayers];
-            ResetAll();
+            Reset();
 
             TasksPlugin.OnAbilityUsed += AbilityUsed;
         }
@@ -45,7 +41,7 @@ namespace Tasks
         protected override void Unhook()
         {
             TasksPlugin.OnAbilityUsed -= AbilityUsed;
-            ResetAll();
+            Reset();
 
             base.Unhook();
         }
@@ -68,7 +64,7 @@ namespace Tasks
             }
         }
 
-        void ResetAll()
+        void Reset()
         {
             if (whereInOrder is null)
                 return;

@@ -43,7 +43,7 @@ namespace Tasks
 
         public static event Action<int, int> OnActivate;
         public static event Action<int> OnDeactivate;
-        public static event Action OnResetAll;
+        public static event Action OnCancelAll;
         public static event Action<int> OnPopup;
         public static event Action<int, SkillSlot> OnAbilityUsed;
 
@@ -210,10 +210,9 @@ namespace Tasks
                 itemIconPrefabCopy = display.itemIconPrefab;
             }
 
-            // -1 forces it to match for deactivation purposes
-            // if(id == myId || id < 0)
-            // Means I don't have to iterate over every task id and check if it matches n*n times
-            OnDeactivate?.Invoke(-1);
+
+            // unhook all tasks. Cleanup from last round
+            OnCancelAll?.Invoke();
         }
 
         void TaskSetup()
@@ -530,6 +529,66 @@ namespace Tasks
                         GenerateTasks(numberOfStageTasks);
                 }
             };
+
+            // problem:
+            // mod kinda breaks when everyone dies.
+            // the host just gets a ton of errors and needs to quit the game manually.
+            // it seems to happen when the end screen appears telling you your stats
+            // so maybe something here can help
+
+            // they all trigger when you die at the same time
+            // didn't get any errors sitting in the stats screen in a single player game
+            // Run.OnRunDestroyGlobal seems to run when you click the button on the stats screen
+            // fifth
+            On.RoR2.GameOverController.RpcClientGameOver += (orig, self) =>
+            {
+                // is this false when the first 3 players die, then true when the last player dies?
+                Debug.Log("RpcClientGameOver");
+                if(self.shouldDisplayGameEndReportPanels)
+                {
+                    CancelAllTasks();
+                }
+                orig(self);
+            };
+
+            // second
+            On.RoR2.GameOverController.Awake += (orig, self) =>
+            {
+                Debug.Log("GameOverController.Awake");
+
+                orig(self);
+            };
+
+            // third
+            On.RoR2.GameOverController.CallRpcClientGameOver += (orig, self) =>
+            {
+                Debug.Log("GameOverController.CallRpcClientGameOver");
+
+                orig(self);
+            };
+            /*
+            On.RoR2.GameOverController.GenerateReportScreen += (orig, self, extra) =>
+            {
+                Debug.Log("GameOverController.GenerateReportScreen");
+
+                orig(self, extra);
+            };
+            */
+            // fourth
+            On.RoR2.GameOverController.InvokeRpcRpcClientGameOver += (orig, self, extra) =>
+            {
+                Debug.Log("GameOverController.InvokeRpcRpcClientGameOver");
+
+                orig(self, extra);
+            };
+
+            // first. False for 1 player game
+            On.RoR2.Run.BeginGameOver += (orig, self, extra) =>
+            {
+                Debug.Log($"Run.BeginGameOver isWin: {extra.isWin}");
+                orig(self, extra);
+            };
+
         }
 
         // These 3 ___CLient() methods are used by NetworkingAPI
@@ -775,6 +834,10 @@ namespace Tasks
                 int r = taskIDNumbers[i];
                 Debug.Log(String.Format("Task: {0}. Reward: {1} From r: {2}", ((TaskType)r).ToString(), rewards[r].ToString(), r));
 
+                // SOmething is null after this debug.log
+                // in the last task
+                // is the readOnlyInstancesList?
+
                 OnActivate?.Invoke(taskIDNumbers[i], totalNumPlayers);
             }
 
@@ -836,6 +899,12 @@ namespace Tasks
                     RemoveObjectivePanel(teleStartTasks[i]);
                 }
             }
+        }
+
+        void CancelAllTasks()
+        {
+            // called when the game ends before the teleporter (when all players die)
+            OnCancelAll?.Invoke();
         }
 
         int[] GetWeightedTasks(int count)
@@ -907,7 +976,7 @@ namespace Tasks
                     return i;
                 }
             }
-            Debug.Log("CharMaster didn't match any players");
+            //Debug.Log("CharMaster didn't match any players"); // spams a lot in NoJump bc NPCs jump
             return -1;
         }
 
@@ -916,9 +985,16 @@ namespace Tasks
             return playerCharacterMasters[playerNum];
         }
 
-        void TaskCompletion(TaskType taskType, int playerNum)
+        public static string GetPlayerName(int playerNum)
         {
-            Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "): Player " + playerNum + " completed task " + taskType.ToString());
+            return GetPlayerCharacterMaster(playerNum).playerCharacterMasterController.GetDisplayName();
+        }
+
+        void TaskCompletion(TaskType taskType, int playerNum, string winMessage)
+        {
+            Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "):"+winMessage);
+            Chat.AddMessage($"<style=cEvent>{winMessage}</style> (Chat.AddMessage)");
+            ChatMessage.Send($"<style=cEvent>{winMessage}</style> (ChatMessage.Send)");
             // server is inactive when you quit the game.
             // some tasks trigger when the stage ends or you quit the stage.
             // do this to not try to give out items for those tasks
@@ -940,7 +1016,10 @@ namespace Tasks
         {
             if (!NetworkServer.active)
             {
+                // this might not quite work. the server is probably active in the end stats screen, but the UI are all gone
                 Debug.Log("Server no longer active. Not gonna update progress");
+                return; // didn't have this before. was it supposed to?
+                // was this check just for debugging or meant to be a safety?
             }
             if (stageStartTasks is null || progress is null)
                 return;

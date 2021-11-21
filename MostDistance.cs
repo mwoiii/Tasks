@@ -9,21 +9,12 @@ namespace Tasks
     class MostDistance : Task
     {
         protected string description { get; } = "Most distance wins";
-        /*
-        public override string AchievementIdentifier { get; } = "SOLRUN_TASKS_MOST_DISTANCE_ACHIEVEMENT_ID"; // delete this from XML if there 
-        public override string UnlockableIdentifier { get; } = "SOLRUN_TASKS_MOST_DISTANCE_REWARD_ID"; // Delete me from XML too
-        // XML: C:\Program Files (x86)\Steam\userdata\Some Numbers\632360\remote\UserProfiles\MoreNumbers.xml
-        // I think all this does is hide it in the log until you have the prereq. You could still complete it (except most prereqs seem to be characters)
-        public override string PrerequisiteUnlockableIdentifier { get; } = "";
-        public override string AchievementNameToken { get; } = "SOLRUN_TASKS_MOST_DISTANCE_ACHIEVEMENT_NAME"; // Fine to have in the XML
-        public override string AchievementDescToken { get; } = description; // plain English
-        public override string UnlockableNameToken { get; } = ""; // plain English
-        */
+
         public override TaskType type { get; } = TaskType.MostDistance;
         protected override string name { get; } = "Most Distance";
 
         double[] startDistances;
-        bool active = false;
+        double winnerDist;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -33,6 +24,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return description;
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by covering the most ({GetStylizedTaskWinStat(winnerDist.ToString())}m) distance.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -53,17 +49,17 @@ namespace Tasks
                 startDistances[i] = s.GetStatValueDouble(StatDef.totalDistanceTraveled);
             }
 
-            active = true;
+        }
+
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+
+            Evaluate();
         }
 
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            UnityEngine.Debug.Log("Unhook MostDistance. This should only run once");
-            active = false;
-
-            Evaluate();
 
             base.Unhook();
         }
@@ -90,7 +86,7 @@ namespace Tasks
                 }
                 Chat.AddMessage($"MostDist({i}): {startDistances[i]} -> {endDist} = {distDelta}. Winner: {winner} with {mostDist}");
             }
-
+            winnerDist = mostDist;
             CompleteTask(winner);
         }
     }

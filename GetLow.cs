@@ -11,7 +11,6 @@ namespace Tasks
         public override TaskType type { get; } = TaskType.GetLow;
 
         float[] lowPercents;
-        bool active = false;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -21,6 +20,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return "Get to the lowest life. No dying.";
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by getting down to {GetStylizedTaskWinStat(lowPercents[winningPlayer].ToString())}% hp.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -35,17 +39,18 @@ namespace Tasks
             Reset();
         }
 
-        protected override void Unhook()
+        protected override void StageEnd()
         {
-            if (!active)
-                return;
-            active = false;
+            base.StageEnd();
 
             Evaluate();
 
-            GlobalEventManager.onServerDamageDealt -= OnDamage;
-
             Reset();
+        }
+
+        protected override void Unhook()
+        {
+            GlobalEventManager.onServerDamageDealt -= OnDamage;
 
             base.Unhook();
         }
@@ -53,6 +58,8 @@ namespace Tasks
         void OnDamage(DamageReport report)
         {
             if (report is null) return;
+            if (report.victimMaster is null) return;
+            if (report.victim is null) return;
             if (report.victimMaster.playerCharacterMasterController is null) return;
 
             int playerNum = TasksPlugin.GetPlayerNumber(report.victimMaster);

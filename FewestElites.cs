@@ -11,7 +11,6 @@ namespace Tasks
         public override TaskType type { get; } = TaskType.FewestElites;
 
         int[] kills;
-        bool active = false;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -23,6 +22,11 @@ namespace Tasks
             return "Kill the fewest elites.";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by killing the fewest ({GetStylizedTaskWinStat(kills[winningPlayer].ToString())}) elites.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set hooks in FewestElites. {numPlayers} players");
@@ -32,21 +36,21 @@ namespace Tasks
 
             kills = new int[numPlayers];
             Reset();
+        }
 
-            active = true;
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+
+            Evaluate();
+
+            Reset();
         }
 
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            active = false;
-
-            Evaluate();
 
             GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-
-            Reset();
 
             base.Unhook();
         }

@@ -27,6 +27,11 @@ namespace Tasks
             return "Find the Lockbox";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by finding the lockbox first.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             base.SetHooks(numPlayers);

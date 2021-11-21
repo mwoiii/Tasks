@@ -24,6 +24,11 @@ namespace Tasks
             return "Be the luckiest.";
         }
 
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by getting {GetStylizedTaskWinStat("lucky")}.";
+        }
+
         protected override void SetHooks(int numPlayers)
         {
             Debug.Log($"Set hooks in GetLucky. {numPlayers} players");
@@ -32,14 +37,15 @@ namespace Tasks
             active = true;
         }
 
-        protected override void Unhook()
+        protected override void StageEnd()
         {
-            if (!active)
-                return;
-            active = false;
+            base.StageEnd();
 
             Evaluate();
+        }
 
+        protected override void Unhook()
+        {
             base.Unhook();
         }
 
@@ -71,7 +77,7 @@ namespace Tasks
             return rollMessage;
         }
 
-        string GetWinMessage(string playerName)
+        string GetWinFlavourMessage(string playerName)
         {
             WeightedSelection<string> messages = new WeightedSelection<string>();
             messages.AddChoice($"{playerName} won!", 1);
@@ -98,7 +104,7 @@ namespace Tasks
             // congrats ???
             //string name = Util.GetBestBodyNameColored(TasksPlugin.GetPlayerCharacterMaster(playerNum).gameObject);
             string name = Util.GetBestMasterName(TasksPlugin.GetPlayerCharacterMaster(playerNum));
-            ChatMessage.Send(GetWinMessage(name));
+            ChatMessage.Send(GetWinFlavourMessage(name));
 
             CompleteTask(playerNum);
         }

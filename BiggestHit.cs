@@ -20,7 +20,6 @@ namespace Tasks
         // Most damage within 0.2s??
 
         float[] biggestHit;
-        bool active = false;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -30,6 +29,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return description;
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} with the big hit of {GetStylizedTaskWinStat(biggestHit[winningPlayer].ToString())} damage.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -47,21 +51,19 @@ namespace Tasks
                 biggestHit = new float[numPlayers];
             }
             Reset();
-            active = true;
+        }
+
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+
+            Evaluate();
+            Reset();
         }
 
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            //Chat.AddMessage("Unhook BiggestHit. This should only run once");
-            active = false;
-            
-            Evaluate();
-
             GlobalEventManager.onServerDamageDealt -= OnDamage;
-
-            Reset();
 
             base.Unhook();
         }

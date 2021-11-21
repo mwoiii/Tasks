@@ -12,7 +12,6 @@ namespace Tasks
 
         int[] bestStreaks;
         int[] currentStreaks;
-        bool active = false;
 
         public override bool CanActivate(int numPlayers)
         {
@@ -22,6 +21,11 @@ namespace Tasks
         public override string GetDescription()
         {
             return "Most kills without getting hit"; // without taking damage? Depends if fall damage ends it
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} with a streak of {GetStylizedTaskWinStat(bestStreaks[winningPlayer].ToString())}.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -38,18 +42,17 @@ namespace Tasks
             Reset();
         }
 
+        protected override void StageEnd()
+        {
+            base.StageEnd();
+            Evaluate();
+            Reset();
+        }
+
         protected override void Unhook()
         {
-            if (!active)
-                return;
-            active = false;
-
-            Evaluate();
-
             GlobalEventManager.onServerDamageDealt -= OnDamage;
             GlobalEventManager.onCharacterDeathGlobal -= OnKill;
-
-            Reset();
 
             base.Unhook();
         }
@@ -88,6 +91,8 @@ namespace Tasks
 
         void OnKill(DamageReport report)
         {
+            if (report is null) return;
+            if (report.attackerMaster is null) return;
             if (report.attackerMaster.playerCharacterMasterController is null) return;
             int playerNum = TasksPlugin.GetPlayerNumber(report.attackerMaster);
 
