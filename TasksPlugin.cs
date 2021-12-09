@@ -838,9 +838,11 @@ namespace Tasks
 
             tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
             tmpLabel.fontStyle = TMPro.FontStyles.Normal; 
-            tmpLabel.fontSizeMax = 18; 
+            tmpLabel.fontSizeMax = 18;
             //winnerName = winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName;
-            tmpLabel.text = winnerName.Remove(15); // arbitrary. Texts gets too small otherwise
+            winnerName = winnerName.Substring(0, Math.Min(15, winnerName.Length)); // arbitrary. Texts gets too small otherwise
+            
+            tmpLabel.text = winnerName; 
             tmpLabel.enableWordWrapping = false;
 
             copy.SetAsLastSibling();

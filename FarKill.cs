@@ -11,7 +11,7 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.FarKill;
 
-        int distance = 100;
+        int distance = 70;
         Vector3[] playerGroundPositions;
         bool active = false;
 
@@ -19,6 +19,11 @@ namespace Tasks
         {
             return $"Kill an enemy {distance}m from where you left the ground";
             //return "Kill an enemy 100m from your last ground point";
+        }
+
+        public override string GetWinMessage(int winningPlayer)
+        {
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by killing something from a ways away.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -70,6 +75,9 @@ namespace Tasks
                 // updateUI(dist/distance)
                 // probably most recent is best
                 // don't care about best
+                Debug.Log($"Far Kill: {playerNum} kill dist: {dist}/{distance} from {playerGroundPositions[playerNum]}");
+                progress[playerNum] = dist / distance;
+                UpdateProgress(progress);
             }
         }
 
