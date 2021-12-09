@@ -47,8 +47,8 @@ namespace Tasks
         public static event Action<int> OnPopup;
         public static event Action<int, SkillSlot> OnAbilityUsed;
 
-        public IRpcAction<int> taskCompletionClient { get; set; }
-        public IRpcAction<int> taskEndedClient { get; set; }
+        public IRpcAction<TaskCompletionInfo> taskCompletionClient { get; set; }
+        public IRpcAction<TaskCompletionInfo> taskEndedClient { get; set; }
         public IRpcAction<TaskInfo> updateTaskClient { get; set; }
         public IRpcAction<ProgressInfo> updateProgressClient { get; set; }
 
@@ -329,19 +329,21 @@ namespace Tasks
             
             // Old miniRpc
             var miniRpc = MiniRpc.CreateInstance(GUID);
-            taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            taskCompletionClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskCompletionInfo taskCompletionInfo) =>
             {
                 // code that runs on the client
                 // user specifies which user so I don't have to check
-                CreateNotification(task);
-                OnPopup?.Invoke(task);
-                RemoveObjectivePanel(task);
+                CreateNotification(taskCompletionInfo.taskType);
+                OnPopup?.Invoke(taskCompletionInfo.taskType);
+                // winner has this called and the basic one
+                // so don't need to pass the name here and create 2 text fields
+                RemoveObjectivePanel(taskCompletionInfo.taskType); //, taskCompletionInfo.winnerName
             });
 
-            taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, int task) =>
+            taskEndedClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskCompletionInfo taskCompletionInfo) =>
             {
                 // task ended
-                RemoveObjectivePanel(task);
+                RemoveObjectivePanel(taskCompletionInfo.taskType, taskCompletionInfo.winnerName);
             });
 
             updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
@@ -690,6 +692,11 @@ namespace Tasks
 
             tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
             rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
+            // both get added under the green bar. doesn't extend the task's box
+            // all 3 are equidistant apart roughly. No overlapping
+            // why do the player and rival overlap? they both have the same parent. Is it bc of the updating?
+            //RectTransform t = CreateDummyProBar(textMeshLabel.transform, 0.5f, Color.red);
+            //CreateDummyProBar(t.transform, 0.75f, Color.blue);
         }
 
         RectTransform CreateTaskProgressBar(Transform parent)
@@ -705,6 +712,22 @@ namespace Tasks
 
             Image image = proBar.AddComponent<Image>();
             image.color = new Color(97 / 255f, 171 / 255f, 50 / 255f); // healthbar green
+
+            return progress;
+        }
+
+        RectTransform CreateDummyProBar(Transform parent, float percent01, Color c)
+        {
+            GameObject proBar = new GameObject("TestBar");
+            RectTransform progress = proBar.AddComponent<RectTransform>();
+            progress.SetParent(parent, false);
+            progress.anchorMin = new Vector2(0, 0);
+            progress.anchorMax = new Vector2(0, 0);
+            progress.pivot = new Vector2(0, 3);
+            progress.sizeDelta = new Vector2(percent01 * 113, 3);
+
+            Image image = proBar.AddComponent<Image>();
+            image.color = c;
 
             return progress;
         }
@@ -762,7 +785,7 @@ namespace Tasks
             UpdateProgress(rect, percent01);
         }
 
-        void RemoveObjectivePanel(int taskType)
+        void RemoveObjectivePanel(int taskType, string winnerName = "")
         {
             for (int i = 0; i < tasksUIObjects.Length; i++)
             {
@@ -774,7 +797,10 @@ namespace Tasks
                         break;
                     }
 
-                    TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[i].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+                    Transform labelTransform = tasksUIObjects[i].transform.Find("Label");
+                    TMPro.TextMeshProUGUI textMeshLabel = labelTransform.GetComponent<TMPro.TextMeshProUGUI>();
+                    CreateWinnerLabel(labelTransform, winnerName);
+
                     if(textMeshLabel is null)
                     {
                         Debug.Log("Couldn't strikethrough");
@@ -796,6 +822,28 @@ namespace Tasks
                     }
                 }
             }
+        }
+
+        void CreateWinnerLabel(Transform ogLabel, string winnerName = "")
+        {
+            if (winnerName == "")
+                return;
+  
+            var copy = Instantiate(ogLabel, ogLabel.parent);
+            TMPro.TextMeshProUGUI tmpLabel = copy.GetComponent<TMPro.TextMeshProUGUI>();
+
+            // this copies the progress bar as well
+            // "ProBar" is the name of the bar. it's a child of tmpLabel
+            Destroy(tmpLabel.transform.Find("ProBar").gameObject);
+
+            tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
+            tmpLabel.fontStyle = TMPro.FontStyles.Normal; 
+            tmpLabel.fontSizeMax = 18; 
+            //winnerName = winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName;
+            tmpLabel.text = winnerName.Remove(15); // arbitrary. Texts gets too small otherwise
+            tmpLabel.enableWordWrapping = false;
+
+            copy.SetAsLastSibling();
         }
 
         void GenerateTasks(int numTasks)
@@ -1007,9 +1055,9 @@ namespace Tasks
             //new TaskCompletionMessage((int)taskType, playerNum).Send(NetworkDestination.Clients);
 
             // old miniRPC version
-            
-            taskCompletionClient.Invoke((int)taskType, NetworkUser.readOnlyInstancesList[playerNum]);
-            taskEndedClient.Invoke((int)taskType); 
+            TaskCompletionInfo info = new TaskCompletionInfo((int)taskType, GetPlayerName(playerNum));
+            taskCompletionClient.Invoke(info, NetworkUser.readOnlyInstancesList[playerNum]);
+            taskEndedClient.Invoke(info); 
         }
 
         void UpdateTaskProgress(TaskType taskType, float[] progress)

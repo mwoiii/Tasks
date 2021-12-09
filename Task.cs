@@ -119,6 +119,20 @@ namespace Tasks
              UnityEngine.MonoBehaviour.StartCoroutine (System.Collections.IEnumerator routine) (at <2cc17dca390941eeb4d7b2ff1f84696a>:IL_0012)
              Tasks.Task.ResetProgress () (at <9e2eee2d661
              */
+
+            /*
+            [Error  : Unity Log] NullReferenceException
+            Stack trace:
+            UnityEngine.MonoBehaviour.StartCoroutine (System.Collections.IEnumerator routine) (at <2cc17dca390941eeb4d7b2ff1f84696a>:IL_0012)
+            Tasks.Task.ResetProgress () (at <e1ba81fdd7304fd0b708ef751fe456c8>:IL_0012)
+            Tasks.DamageMultipleTargets.ResetKills () (at <e1ba81fdd7304fd0b708ef751fe456c8>:IL_0037)
+            Tasks.DamageMultipleTargets.Unhook () (at <e1ba81fdd7304fd0b708ef751fe456c8>:IL_0025)
+            Tasks.Task.RunOver (RoR2.Run run) (at <e1ba81fdd7304fd0b708ef751fe456c8>:IL_0001)
+            RoR2.Run.OnDestroy () (at <da7c19fa62814b28bdb8f3a9223868e1>:IL_0009) 
+
+            When quitting to desktop in a run
+            Is the problem with starting the coroutine or ResetProgressInTime?
+             */
             TasksPlugin.instance?.StartCoroutine(ResetProgressInTime());
         }
 
@@ -140,6 +154,9 @@ namespace Tasks
                 else
                 {
                     // I couldn't get this to run. Maybe this wasn't the issue?
+                    // get null reference exception and this message DOESN'T appear
+                    // so it doesn't stop that from happening
+                    // maybe this message plays in between stages? So it might still be neeeded
                     Debug.Log($"{type:g} was inactive. Don't update progress");
                 }
             }

@@ -232,4 +232,28 @@ namespace Tasks
             rivalProgress = reader.ReadInt32();
         }
     }
+
+    public class TaskCompletionInfo : MessageBase
+    {
+        public int taskType;
+        public string winnerName;
+
+        public TaskCompletionInfo(int _taskType, string _winnerName)
+        {
+            taskType = _taskType;
+            winnerName = _winnerName;
+        }
+
+        public override void Serialize(NetworkWriter writer)
+        {
+            writer.Write(taskType);
+            writer.Write(winnerName);
+        }
+
+        public override void Deserialize(NetworkReader reader)
+        {
+            taskType = reader.ReadInt32();
+            winnerName = reader.ReadString();
+        }
+    }
 }
