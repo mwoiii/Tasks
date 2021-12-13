@@ -109,69 +109,73 @@ namespace Tasks
 
         public void Update()
         {
-            if (Input.GetKeyDown(KeyCode.F1))
+            bool fKeysActive = true; // for testing. Set to false for release
+            if (fKeysActive)
             {
-                PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
-            }
-            if (Input.GetKeyDown(KeyCode.F2))
-            {
-                TeleporterInteraction.instance.shouldAttemptToSpawnGoldshoresPortal = true;
-                TeleporterInteraction.instance.shouldAttemptToSpawnMSPortal = true;
-                TeleporterInteraction.instance.shouldAttemptToSpawnShopPortal = true;
-            }
-            if (Input.GetKeyDown(KeyCode.F3))
-            {
-
-            }
-            if(Input.GetKeyDown(KeyCode.F4))
-            {
-                Chat.AddMessage("Pressed F4");
-                // spawn a lockbox nearby
-                Xoroshiro128Plus xoroshiro128Plus = new Xoroshiro128Plus(0);
-
-                // "iscbrokendrone1";
-                GameObject gameObject2 = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscLockbox"), new DirectorPlacementRule
+                if (Input.GetKeyDown(KeyCode.F1))
                 {
-                    placementMode = DirectorPlacementRule.PlacementMode.Direct,
-                    position = GetPlayerCharacterMaster(0).GetBody().transform.position + new Vector3(1, 0, 0)
-                }, xoroshiro128Plus));
-                Chat.AddMessage($"Spawned {gameObject2.name} at {gameObject2.transform.position}");
-                
-            }
-            if(Input.GetKeyDown(KeyCode.F5))
-            {
-                // I can call this on the server to show on all players
-                ChatMessage.Send("Do I need to add this API? No. This should go to each player");
-            }
-            if(Input.GetKeyDown(KeyCode.F6))
-            {
-                Chat.AddMessage("Pressed F6");
-                // creating a command orb
-                //typeof(GenericPickupController).InvokeMethod("SendPickupMessage", GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
-                // turn on command I believe
-                
-                typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
-                if(typeof(CommandArtifactManager).GetField("commandCubePrefab") is null)
-                {
-                    Chat.AddMessage("commandCubePrefab is null");
+                    PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
+                    PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
                 }
-                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab",  Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
-                // need to make an item droplet. Specifically have it hit the ground
-                PickupDropletController.onDropletHitGroundServer += TurnOffCommand;
-                // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
+                if (Input.GetKeyDown(KeyCode.F2))
+                {
+                    TeleporterInteraction.instance.shouldAttemptToSpawnGoldshoresPortal = true;
+                    TeleporterInteraction.instance.shouldAttemptToSpawnMSPortal = true;
+                    TeleporterInteraction.instance.shouldAttemptToSpawnShopPortal = true;
+                }
+                if (Input.GetKeyDown(KeyCode.F3))
+                {
 
-                // icon
-                //RoR2Content.Artifacts.commandArtifactDef.smallIconSelectedSprite
+                }
+                if (Input.GetKeyDown(KeyCode.F4))
+                {
+                    Chat.AddMessage("Pressed F4");
+                    // spawn a lockbox nearby
+                    Xoroshiro128Plus xoroshiro128Plus = new Xoroshiro128Plus(0);
 
-                // create a droplet
-                PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
-                PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
-            }
-            if(Input.GetKeyDown(KeyCode.F7))
-            {
-                Chat.AddMessage("Pressed F7");
+                    // "iscbrokendrone1";
+                    GameObject gameObject2 = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/iscLockbox"), new DirectorPlacementRule
+                    {
+                        placementMode = DirectorPlacementRule.PlacementMode.Direct,
+                        position = GetPlayerCharacterMaster(0).GetBody().transform.position + new Vector3(1, 0, 0)
+                    }, xoroshiro128Plus));
+                    Chat.AddMessage($"Spawned {gameObject2.name} at {gameObject2.transform.position}");
 
+                }
+                if (Input.GetKeyDown(KeyCode.F5))
+                {
+                    // I can call this on the server to show on all players
+                    ChatMessage.Send("Do I need to add this API? No. This should go to each player");
+                }
+                if (Input.GetKeyDown(KeyCode.F6))
+                {
+                    Chat.AddMessage("Pressed F6");
+                    // creating a command orb
+                    //typeof(GenericPickupController).InvokeMethod("SendPickupMessage", GetPlayerCharacterMaster(playerNum), rewards[(int)task].item);
+                    // turn on command I believe
+
+                    typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                    if (typeof(CommandArtifactManager).GetField("commandCubePrefab") is null)
+                    {
+                        Chat.AddMessage("commandCubePrefab is null");
+                    }
+                    typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                    // need to make an item droplet. Specifically have it hit the ground
+                    PickupDropletController.onDropletHitGroundServer += TurnOffCommand;
+                    // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
+
+                    // icon
+                    //RoR2Content.Artifacts.commandArtifactDef.smallIconSelectedSprite
+
+                    // create a droplet
+                    PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
+                    PickupDropletController.CreatePickupDroplet(p, GetPlayerCharacterMaster(0).GetBody().transform.position, GetPlayerCharacterMaster(0).GetBody().transform.forward);
+                }
+                if (Input.GetKeyDown(KeyCode.F7))
+                {
+                    Chat.AddMessage("Pressed F7");
+
+                }
             }
 
         }
@@ -198,7 +202,11 @@ namespace Tasks
             
             PopulateTempItemLists();
 
-            Debug.Log("ItemInventoryDisplay");
+            /*
+             * This is only run on the server
+             * But it doesn't work anyway
+             * And clients need this too
+             * so, in updateTasksUI() that is run by everyone, they use a different way to find itemIconPrefab
             ItemInventoryDisplay display = FindObjectOfType<ItemInventoryDisplay>();
             if (display is null)
             {
@@ -209,7 +217,7 @@ namespace Tasks
             {
                 itemIconPrefabCopy = display.itemIconPrefab;
             }
-
+            */
 
             // unhook all tasks. Cleanup from last round
             OnCancelAll?.Invoke();
@@ -322,10 +330,11 @@ namespace Tasks
         void SetupNetworking()
         {
             // new R2API networking API
+            /*
             NetworkingAPI.RegisterMessageType<SetupTaskMessage>();
             NetworkingAPI.RegisterMessageType<TaskCompletionMessage>();
             NetworkingAPI.RegisterMessageType<UpdateProgressMessage>();
-
+            */
             
             // Old miniRpc
             var miniRpc = MiniRpc.CreateInstance(GUID);
@@ -348,14 +357,25 @@ namespace Tasks
 
             updateTaskClient = miniRpc.RegisterAction(Target.Client, (NetworkUser user, TaskInfo taskInfo) =>
             {
+                // this is called once for each task when tasks are created
                 if (currentTasks is null || currentTasks.Length != taskInfo.total)
                 {
                     currentTasks = new TaskInfo[taskInfo.total];
                 }
 
+                // make sure your number of UI elements matches the host's taskInfo they are giving you
+                // the number of tasks is determined by the config file which can differ player-to-player
+                if(taskInfo.total != tasksUIObjects.Length)
+                {
+                    tasksUIObjects = new GameObject[taskInfo.total];
+                    tasksUIRects = new RectTransform[taskInfo.total];
+                    rivalTasksUIRects = new RectTransform[taskInfo.total];
+                }
+
                 currentTasks[taskInfo.index] = taskInfo;
                 rewards[(int)taskInfo.taskType] = taskInfo.reward;
 
+                // make each UI element one at a time for each task
                 UpdateTasksUI(taskInfo.index);
             });
 
@@ -450,11 +470,16 @@ namespace Tasks
                 if (go?.GetComponent<TeleporterInteraction>())
                 {
                     // this might be true for interacting with the end tp to switch to loop mode
+                    // these don't actually seem to work
+                    // can't ctrl+f to find this output in the log
+                    // but StartTeleporter task uses the same logic and it works????
+                    // so it seems to work, but isn't outputting anymore? Why?
                     Debug.Log("Interacted with TP. InterType: " + interactableType + " name: " + go.name);
                 }
                 else if(go?.GetComponent<SceneExitController>())
                 {
                     // not a tp so probably some kind of tp like blue or gold
+                    // this also doesn't seem to work
                     Debug.Log($"Interacted with a SceneExitController {go.name}");
                     StageEnd();
                 }
@@ -541,15 +566,35 @@ namespace Tasks
             // they all trigger when you die at the same time
             // didn't get any errors sitting in the stats screen in a single player game
             // Run.OnRunDestroyGlobal seems to run when you click the button on the stats screen
+
+            // Server
+            /*
+            [Info   : Unity Log] Run.BeginGameOver isWin: False
+            [Info   : Unity Log] GameOverController.Awake
+            [Info   : Unity Log] GameOverController.CallRpcClientGameOver
+            [Info   : Unity Log] GameOverController.InvokeRpcRpcClientGameOver
+            [Info   : Unity Log] RpcClientGameOver
+            */
+
+            // Client
+            /*
+            [Info   : Unity Log] GameOverController.Awake
+            [Info   : Unity Log] GameOverController.InvokeRpcRpcClientGameOver
+            [Info   : Unity Log] RpcClientGameOver
+            */
+
             // fifth
             On.RoR2.GameOverController.RpcClientGameOver += (orig, self) =>
             {
                 // is this false when the first 3 players die, then true when the last player dies?
-                Debug.Log("RpcClientGameOver");
-                if(self.shouldDisplayGameEndReportPanels)
+                Debug.Log($"RpcClientGameOver Should? {self.shouldDisplayGameEndReportPanels}"); //false for 1 player when you die?? Why?
+                // false even in multiplayer
+                /*
+                if (self.shouldDisplayGameEndReportPanels)
                 {
                     CancelAllTasks();
                 }
+                */
                 orig(self);
             };
 
@@ -557,7 +602,7 @@ namespace Tasks
             On.RoR2.GameOverController.Awake += (orig, self) =>
             {
                 Debug.Log("GameOverController.Awake");
-
+                CancelAllTasks();
                 orig(self);
             };
 
@@ -591,53 +636,6 @@ namespace Tasks
                 orig(self, extra);
             };
 
-        }
-
-        // These 3 ___CLient() methods are used by NetworkingAPI
-        // but aren't being used ATM bc I got miniRPC to work and I know how to send messages to specific players with that
-        public void SetupTasksClient(TaskInfo taskInfo)
-        {
-            //Debug.Log("SetupTasksClient");
-            if (currentTasks is null || currentTasks.Length != taskInfo.total)
-            {
-                currentTasks = new TaskInfo[taskInfo.total];
-            }
-
-            currentTasks[taskInfo.index] = taskInfo;
-            rewards[(int)taskInfo.taskType] = taskInfo.reward;
-
-            UpdateTasksUI(taskInfo.index);
-        }
-
-        public void TaskCompletionClient(int task, int playerNum)
-        {
-            // am I the player?
-            // instances.master should be the local player
-            // GetPlayer(num) should be the list of all players. Is the list in the same order for each client???
-            bool isWinner = PlayerCharacterMasterController.instances[0].master == GetPlayerCharacterMaster(playerNum); // Does not work
-            // [Info   : Unity Log] Task 8 complete by player 1. Is it me? False
-            // should be true. Does that mean the player order is different?
-            // Should I send out the player order?
-            // or other info like netID?
-            Debug.Log($"Player {playerNum} won. I think I am player {GetPlayerNumber(PlayerCharacterMasterController.instances[0].master)}");
-            Debug.Log($"Task {(TaskType)task:g} complete by player {playerNum}. Is it me? {isWinner}");
-            if (isWinner)
-            {
-                CreateNotification(task);
-                OnPopup?.Invoke(task);
-            }
-            RemoveObjectivePanel(task);
-        }
-
-        public void UpdateProgressClient(ProgressInfo progressInfo, int playerNum)
-        {
-            bool isMe = PlayerCharacterMasterController.instances[0].master == GetPlayerCharacterMaster(playerNum); // doesn't work
-            if (isMe)
-            {
-                bool playerLeading = progressInfo.GetMyProgress() > progressInfo.GetRivalProgress();
-                UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
-                UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
-            }
         }
 
         void UpdateTasksUI(int taskIndex, string text = "")
@@ -691,7 +689,8 @@ namespace Tasks
             }
 
             tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
-            rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
+            rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform, "RivalBar");
+
             // both get added under the green bar. doesn't extend the task's box
             // all 3 are equidistant apart roughly. No overlapping
             // why do the player and rival overlap? they both have the same parent. Is it bc of the updating?
@@ -699,9 +698,9 @@ namespace Tasks
             //CreateDummyProBar(t.transform, 0.75f, Color.blue);
         }
 
-        RectTransform CreateTaskProgressBar(Transform parent)
+        RectTransform CreateTaskProgressBar(Transform parent, string name="ProBar")
         {
-            GameObject proBar = new GameObject("ProBar");
+            GameObject proBar = new GameObject(name);
             RectTransform progress = proBar.AddComponent<RectTransform>();
             progress.SetParent(parent, false);
             progress.anchorMin = new Vector2(0, 0); // min and max snap the bar to the bottom of its parent
@@ -739,7 +738,7 @@ namespace Tasks
         /// <param name="percent01">Percent complete between 0 and 1</param>
         void UpdateProgress(RectTransform rect, float percent01)
         {
-            if(rect is null || rect.sizeDelta == null)
+            if(rect is null)
             {
                 Debug.Log("Rect was null");
                 return;
@@ -749,6 +748,7 @@ namespace Tasks
             // still have the error with it
             // the null is triggered when quitting the game. And new games seem to work so it's low priority
             // correction: unhooks get broken
+            // When you play a game, then it ends, rect isn't 'null', but it is garbage. How to check for that?
             rect.sizeDelta = new Vector2(percent01 * 113, 3); // 113 just looks about right
         }
 
@@ -835,6 +835,9 @@ namespace Tasks
             // this copies the progress bar as well
             // "ProBar" is the name of the bar. it's a child of tmpLabel
             Destroy(tmpLabel.transform.Find("ProBar").gameObject);
+            // destroy the rival bar too
+            Destroy(tmpLabel.transform.Find("RivalBar").gameObject);
+
 
             tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
             tmpLabel.fontStyle = TMPro.FontStyles.Normal; 
@@ -846,6 +849,30 @@ namespace Tasks
             tmpLabel.enableWordWrapping = false;
 
             copy.SetAsLastSibling();
+        }
+
+        void DestroyTaskUI()
+        {
+            // For use when everyone dies, you go back to menu and start a new game
+            // Clears the rects so the new game will make new ones
+            // otherwise, they aren't null, but aren't accessible
+
+            for (int i = 0; i < tasksUIRects.Length; i++)
+            {
+                if(tasksUIRects[i] != null)
+                    Destroy(tasksUIRects[i].gameObject);
+                if(rivalTasksUIRects[i] != null)
+                    Destroy(rivalTasksUIRects[i].gameObject);
+                if(tasksUIObjects[i] != null)
+                    Destroy(tasksUIObjects[i].gameObject);
+                // the rects should be children of the UIobject
+                // would it work if I just deleted the objects and let the rects go with?
+
+                tasksUIRects[i] = null;
+                rivalTasksUIRects[i] = null;
+                tasksUIObjects[i] = null;
+            }
+            Debug.Log("Destroyed UI objects and rects");
         }
 
         void GenerateTasks(int numTasks)
@@ -954,7 +981,10 @@ namespace Tasks
         void CancelAllTasks()
         {
             // called when the game ends before the teleporter (when all players die)
-            OnCancelAll?.Invoke();
+            Debug.Log("Cancel all tasks");
+            OnCancelAll?.Invoke(); // is it a problem is clients call this? Shouldn't be. Clients never create the tasks so nothing is subbed to this
+            telePlaced = false;
+            DestroyTaskUI();
         }
 
         int[] GetWeightedTasks(int count)
@@ -1043,8 +1073,8 @@ namespace Tasks
         void TaskCompletion(TaskType taskType, int playerNum, string winMessage)
         {
             Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "):"+winMessage);
-            Chat.AddMessage($"<style=cEvent>{winMessage}</style> (Chat.AddMessage)");
-            ChatMessage.Send($"<style=cEvent>{winMessage}</style> (ChatMessage.Send)");
+            //Chat.AddMessage($"<style=cEvent>{winMessage}</style> (Chat.AddMessage)");
+            ChatMessage.Send($"<style=cEvent>{winMessage}</style> (ChatMessage.Send)"); // works for clients
             // server is inactive when you quit the game.
             // some tasks trigger when the stage ends or you quit the stage.
             // do this to not try to give out items for those tasks
@@ -1064,6 +1094,7 @@ namespace Tasks
 
         void UpdateTaskProgress(TaskType taskType, float[] progress)
         {
+            // is this why the host doesn't get rival bars?
             if (!NetworkServer.active)
             {
                 // this might not quite work. the server is probably active in the end stats screen, but the UI are all gone
@@ -1098,7 +1129,10 @@ namespace Tasks
                 }
                 ProgressInfo p = new ProgressInfo(taskIndex, Mathf.Clamp01(myProgress), Mathf.Clamp01(rival));
                 if (NetworkUser.readOnlyInstancesList is null || NetworkUser.readOnlyInstancesList.Count <= i)
+                {
+                    Debug.Log($"Null: {NetworkUser.readOnlyInstancesList is null} Count: {NetworkUser.readOnlyInstancesList.Count} <= {i}");
                     return;
+                }
 
                 updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
 

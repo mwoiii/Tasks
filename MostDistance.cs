@@ -28,7 +28,7 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
-            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by covering the most ({GetStylizedTaskWinStat(winnerDist.ToString())}m) distance.";
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by covering the most ({GetStylizedTaskWinStat(winnerDist.ToString("F2"))}m) distance.";
         }
 
         protected override void SetHooks(int numPlayers)

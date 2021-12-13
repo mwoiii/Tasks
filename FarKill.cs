@@ -75,7 +75,7 @@ namespace Tasks
                 // updateUI(dist/distance)
                 // probably most recent is best
                 // don't care about best
-                Debug.Log($"Far Kill: {playerNum} kill dist: {dist}/{distance} from {playerGroundPositions[playerNum]}");
+                //Debug.Log($"Far Kill: {playerNum} kill dist: {dist}/{distance} from {playerGroundPositions[playerNum]}");
                 progress[playerNum] = dist / distance;
                 UpdateProgress(progress);
             }

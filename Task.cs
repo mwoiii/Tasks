@@ -107,7 +107,8 @@ namespace Tasks
 
         virtual protected void UpdateProgress(float[] progress)
         {
-            OnUpdateProgress?.Invoke(type, progress);
+            if(taskActive)
+                OnUpdateProgress?.Invoke(type, progress);
         }
 
         protected void ResetProgress()

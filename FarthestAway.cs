@@ -33,7 +33,7 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
-            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by being {GetStylizedTaskWinStat(winnerDist.ToString())}m away in 20 seconds.";
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by being {GetStylizedTaskWinStat(winnerDist.ToString("F2"))}m away in 20 seconds.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -139,7 +139,13 @@ namespace Tasks
 
             for (int i = 0; i < startPositions.Length; i++)
             {
-                Vector3 endPos = TasksPlugin.GetPlayerCharacterMaster(i).GetBody().transform.position;
+                // skip players who are dead
+                CharacterMaster charMast = TasksPlugin.GetPlayerCharacterMaster(i);
+                if (charMast == null) continue;
+                CharacterBody charBody = charMast.GetBody();
+                if (charBody == null) continue;
+
+                Vector3 endPos = charBody.transform.position;
                 float dist = Vector3.Distance(startPositions[i], endPos);
 
                 if (dist > mostDist)
