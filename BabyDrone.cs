@@ -10,7 +10,7 @@ namespace Tasks
     class BabyDrone : Task
     {
         public override TaskType type { get; } = TaskType.BabyDrone;
-        protected override string name { get; } = "Baby Drone"; // is this ever used?
+        protected override string name { get; } = "Baby Drone";
 
         CharacterMaster[] drones;
         CharacterMaster createdDrone;

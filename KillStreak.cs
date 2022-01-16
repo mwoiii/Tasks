@@ -10,12 +10,14 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.KillStreak;
 
+        protected override string name { get; } = "Kill Streak";
+
         int[] bestStreaks;
         int[] currentStreaks;
 
         public override bool CanActivate(int numPlayers)
         {
-            return true;// numPlayers > 1;
+            return numPlayers > 1;
         }
 
         public override string GetDescription()
@@ -59,6 +61,8 @@ namespace Tasks
 
         void OnDamage(DamageReport report)
         {
+            if (report is null) return;
+            if (report.victimMaster is null) return;
             if (report.victimMaster.playerCharacterMasterController is null) return;
 
             // any damage ends your streak

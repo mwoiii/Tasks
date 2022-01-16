@@ -10,6 +10,7 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.QuickDraw;
 
+        protected override string name { get; } = "Quick Draw";
 
         public override string GetDescription()
         {

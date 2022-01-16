@@ -11,6 +11,8 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.FarKill;
 
+        protected override string name { get; } = "Far Kill";
+
         int distance = 70;
         Vector3[] playerGroundPositions;
         bool active = false;

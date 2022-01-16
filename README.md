@@ -16,7 +16,7 @@ OpenChests - Be the first to open x chests (multishops count too).
 
 Die - It's a race to 0hp.
 
-VeryBest - Be the very best. Like no one ever was. (kill the most unique enemies. beetle and fire beetle are different.)
+VeryBest - Be the very best. Like no one ever was. (kill the most unique enemies. Beetle and fire beetle are different.)
 
 There are 20+ tasks to do. The description mostly tells you what to do. Some of the descriptions are a bit vague so you'll have to figure out what to do.
 
@@ -38,7 +38,7 @@ I modeled the bars and colours after how barriers and shields work in game (gold
 
 Basically, the progress UI is bad, but serviceable. (except it only shows your own progres if you are the host for some reason).
 
-Command Icon (purple thing by goat hoof) - shows when the reward will be a command droplet. So in this case, instead of getting a hoof, you get a white command droplet.
+Command Icon (purple thing by goat hoof) - shows when the reward will be a command droplet. So in this case, instead of getting a hoof, you get a white command droplet. It drops to the ground and then it is free game so be quick!
 
 x5 - that item will be a temp item. So, the armour and syringes here.
 
@@ -46,7 +46,7 @@ x5 - that item will be a temp item. So, the armour and syringes here.
 
 Requires BepInEx, R2API, HookGenPatcher, and MiniRpcLib
 
-Place Tasks.dll in Risk of Rain 2\BepInEx\plugins
+Unzip and place Tasks.dll in Risk of Rain 2\BepInEx\plugins
 
 ## Config
 

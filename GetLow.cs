@@ -10,11 +10,13 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.GetLow;
 
+        protected override string name { get; } = "Get Low";
+
         float[] lowPercents;
 
         public override bool CanActivate(int numPlayers)
         {
-            return true; // numPlayers > 1;
+            return numPlayers > 1;
         }
 
         public override string GetDescription()
@@ -24,7 +26,7 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
-            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by getting down to {GetStylizedTaskWinStat(lowPercents[winningPlayer].ToString())}% hp.";
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by getting down to {GetStylizedTaskWinStat(lowPercents[winningPlayer].ToString("F2"))}% hp.";
         }
 
         protected override void SetHooks(int numPlayers)

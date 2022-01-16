@@ -11,6 +11,8 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.NoJump;
 
+        protected override string name { get; } = "No Jump";
+
         bool[] playerFailed;
         int numPlayersFailed;
 
@@ -26,6 +28,7 @@ namespace Tasks
 
         public override bool CanActivate(int numPlayers)
         {
+            // this might work in single player
             return numPlayers>1;
         }
 

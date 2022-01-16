@@ -9,6 +9,8 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.Die;
 
+        protected override string name { get; } = "Die";
+
         public override bool CanActivate(int numPlayers)
         {
             return numPlayers > 1;

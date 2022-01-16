@@ -109,7 +109,7 @@ namespace Tasks
 
         public void Update()
         {
-            bool fKeysActive = true; // for testing. Set to false for release
+            bool fKeysActive = false; // for testing. Set to false for release
             if (fKeysActive)
             {
                 if (Input.GetKeyDown(KeyCode.F1))
@@ -1074,7 +1074,7 @@ namespace Tasks
         {
             Debug.Log("SERVER(" + (NetworkServer.active ? "active" : "not active") + "):"+winMessage);
             //Chat.AddMessage($"<style=cEvent>{winMessage}</style> (Chat.AddMessage)");
-            ChatMessage.Send($"<style=cEvent>{winMessage}</style> (ChatMessage.Send)"); // works for clients
+            ChatMessage.Send($"<style=cEvent>{winMessage}</style>"); // works for clients
             // server is inactive when you quit the game.
             // some tasks trigger when the stage ends or you quit the stage.
             // do this to not try to give out items for those tasks

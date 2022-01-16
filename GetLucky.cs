@@ -12,6 +12,8 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.GetLucky;
 
+        protected override string name { get; } = "Get Lucky";
+
         bool active = false;
 
         public override bool CanActivate(int numPlayers)

@@ -10,7 +10,7 @@ namespace Tasks
     {
 
         public override TaskType type { get; } = TaskType.HealingItem;
-        protected override string name { get; } = "Find a healing item";
+        protected override string name { get; } = "Find a Healing Item";
 
 
         public override string GetDescription()

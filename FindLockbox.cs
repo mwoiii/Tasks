@@ -10,6 +10,7 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.FindLockbox;
 
+        protected override string name { get; } = "Find Lockbox";
 
         public override bool CanActivate(int numPlayers)
         {

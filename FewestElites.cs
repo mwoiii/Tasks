@@ -10,6 +10,8 @@ namespace Tasks
     {
         public override TaskType type { get; } = TaskType.FewestElites;
 
+        protected override string name { get; } = "Fewest Elites";
+
         int[] kills;
 
         public override bool CanActivate(int numPlayers)

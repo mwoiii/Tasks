@@ -11,6 +11,8 @@ namespace Tasks
         // Be the very best. Like no one ever was
         public override TaskType type { get; } = TaskType.VeryBest;
 
+        protected override string name { get; } = "Very Best";
+
         HashSet<string>[] mobNames;
 
         public override bool CanActivate(int numPlayers)
