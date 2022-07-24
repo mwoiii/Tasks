@@ -26,9 +26,10 @@ using R2API.Networking.Interfaces;
 
 namespace Tasks
 {
+    // nameof(ItemDropAPI),
     [BepInDependency("com.bepis.r2api")]
     [BepInDependency(MiniRpcPlugin.Dependency)]
-    [R2APISubmoduleDependency(nameof(ItemDropAPI), nameof(NetworkingAPI))]
+    [R2APISubmoduleDependency(nameof(NetworkingAPI))]
     //[R2APISubmoduleDependency(nameof(yourDesiredAPI))]
     [BepInPlugin(GUID, MODNAME, VERSION)]
     public sealed class TasksPlugin : BaseUnityPlugin
@@ -37,7 +38,7 @@ namespace Tasks
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "0.0.0";
+            VERSION = "1.0.0";
 
         public static TasksPlugin instance;
 
@@ -98,7 +99,7 @@ namespace Tasks
             
 
             SetupNetworking();
-            SetGameHooks();        
+            SetGameHooks();
         }
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Start is automatically called by Unity")]
@@ -112,6 +113,8 @@ namespace Tasks
             bool fKeysActive = false; // for testing. Set to false for release
             if (fKeysActive)
             {
+                /*
+                 * Input doesn't work anymore?
                 if (Input.GetKeyDown(KeyCode.F1))
                 {
                     PickupIndex p = new PickupIndex(RoR2Content.Items.BarrierOnKill.itemIndex);
@@ -176,6 +179,7 @@ namespace Tasks
                     Chat.AddMessage("Pressed F7");
 
                 }
+                */
             }
 
         }
@@ -329,6 +333,7 @@ namespace Tasks
 
         void SetupNetworking()
         {
+            //Debug.Log("Tasks: SetupNetworking");
             // new R2API networking API
             /*
             NetworkingAPI.RegisterMessageType<SetupTaskMessage>();
@@ -385,11 +390,14 @@ namespace Tasks
                 UpdateProgress(tasksUIRects[progressInfo.taskIndex], progressInfo.GetMyProgress());
                 UpdateProgress(rivalTasksUIRects[progressInfo.taskIndex], progressInfo.GetRivalProgress(), playerLeading);
             });
-            
+
+            //Debug.Log("Tasks: End of SetupNetworking");
+
         }
 
         void SetGameHooks()
         {
+            //Debug.Log("Tasks: SetGameHooks");
             // Used for tasks
             On.RoR2.CharacterBody.OnSkillActivated += (orig, self, param) =>
             {
@@ -411,6 +419,7 @@ namespace Tasks
 
                 orig(self, param);
             };
+
             GlobalEventManager.OnInteractionsGlobal += (Interactor interactor, IInteractable interactable, GameObject go) =>
             {
                 // interactor is the player
@@ -435,6 +444,7 @@ namespace Tasks
                 // Tp leave
                 // [Info   : Unity Log] Interacted with Teleporter1(Clone) InterType: RoR2.TeleporterInteraction Components: UnityEngine.Transform UnityEngine.Networking.NetworkIdentity UnityEngine.Networking.NetworkTransform RoR2.Highlight RoR2.HoldoutZoneController RoR2.TeleporterInteraction RoR2.OutsideInteractableLocker RoR2.GenericDisplayNameProvider RoR2.CombatDirector RoR2.CombatDirector RoR2.SceneExitController RoR2.ModelLocator RoR2.CombatSquad RoR2.BossGroup RoR2.EntityStateMachine RoR2.NetworkStateMachine AkGameObj RoR2.HoldoutZoneController+FocusConvergenceController 
 
+                /*
                 if (go?.GetComponent<ShopTerminalBehavior>())
                 {
                     // Multishops AND 3D printers
@@ -462,6 +472,7 @@ namespace Tasks
                 {
                     //Chat.AddMessage("Interacted with a 3D printer. InterType: " + interactableType + " name: " + go.name);
                 }
+                */
                 // when you use a 3D printer or eq drone i think or pool prob
                 // PurchaseInteraction.onItemSpentOnPurchase += method
                 // purchaseInteraction.gameObject.name.Contains("Duplicator")
@@ -485,6 +496,7 @@ namespace Tasks
                 }
                 
             };
+            /*
             TeleporterInteraction.onTeleporterBeginChargingGlobal += (TeleporterInteraction interaction) =>
             {
                 // Once the tele event starts
@@ -501,6 +513,7 @@ namespace Tasks
                 Debug.Log("TP charged to 100%");
 
             };
+            */
             TeleporterInteraction.onTeleporterFinishGlobal += (_) =>
             {
                 // Runs when you click the tele to move to the next stage (after you kill the boss and charge the tele)
@@ -512,11 +525,13 @@ namespace Tasks
                 }
             };
 
+            /*
             BossGroup.onBossGroupDefeatedServer += (BossGroup group) =>
             {
                 // this works. Timer too
                 //Chat.AddMessage($"Boss defeated in {group.fixedTimeSinceEnabled} seconds");
             };
+            */
 
             On.RoR2.Run.OnServerTeleporterPlaced += (orig, self, director, teleporter) =>
             {
@@ -528,6 +543,33 @@ namespace Tasks
                 // telePlaced = false at end of stage to reset for the next stage
             };
 
+            // most of ObjectivePanelController stuff runs in update
+            // this runs in update
+            /*
+            On.RoR2.UI.ObjectivePanelController.RunEnterAnimations += (orig, self) =>
+            {
+                orig(self);
+                
+                Debug.Log("ObjPanel Enter Animation");
+            };
+            */
+
+            On.RoR2.UI.HudObjectiveTargetSetter.Update += (orig, self) =>
+            {
+                orig(self);
+
+                // should I check if panel already exists?
+                // might break between levels?
+                if(panel == null)
+                {
+                    Debug.Log("Panel is null in HudObjSetter.Update");
+                }
+                if (self.objectivePanelController)
+                {
+                    panel = self.objectivePanelController;
+                }
+            };
+
             // controls starting tasks
             On.RoR2.UI.HUD.Awake += (orig, self) =>
             {
@@ -536,7 +578,13 @@ namespace Tasks
                 // GenerateTasks waits 3 seconds and that seems to do it
                 orig(self);
                 hud = self;
-                panel = self.objectivePanelController;
+
+                // ObjectivePanelController panel;
+                // no longer exists
+                // and I don't think objPanelController exists at hud.Awake
+                // I think it's made a little later. So need to set panel later
+                //panel = self.objectivePanelController;
+                
                 // check if there is a tele
                 // skip stages with no tele (bazaar, gold coast, obliterate, acrid area, boss scav, end boss)
 
@@ -584,19 +632,21 @@ namespace Tasks
             */
 
             // fifth
+            /*
             On.RoR2.GameOverController.RpcClientGameOver += (orig, self) =>
             {
                 // is this false when the first 3 players die, then true when the last player dies?
                 Debug.Log($"RpcClientGameOver Should? {self.shouldDisplayGameEndReportPanels}"); //false for 1 player when you die?? Why?
                 // false even in multiplayer
-                /*
+                
                 if (self.shouldDisplayGameEndReportPanels)
                 {
                     CancelAllTasks();
                 }
-                */
+                
                 orig(self);
             };
+            */
 
             // second
             On.RoR2.GameOverController.Awake += (orig, self) =>
@@ -607,12 +657,14 @@ namespace Tasks
             };
 
             // third
+            /*
             On.RoR2.GameOverController.CallRpcClientGameOver += (orig, self) =>
             {
                 Debug.Log("GameOverController.CallRpcClientGameOver");
 
                 orig(self);
             };
+            */
             /*
             On.RoR2.GameOverController.GenerateReportScreen += (orig, self, extra) =>
             {
@@ -622,19 +674,30 @@ namespace Tasks
             };
             */
             // fourth
+            /*
+             * Broken now. Might need a different reference assembly
+             * But I don't think I'm using it anyway
+             * I think it was just here for debugging
             On.RoR2.GameOverController.InvokeRpcRpcClientGameOver += (orig, self, extra) =>
             {
                 Debug.Log("GameOverController.InvokeRpcRpcClientGameOver");
 
                 orig(self, extra);
             };
+            */
 
             // first. False for 1 player game
+            /*
             On.RoR2.Run.BeginGameOver += (orig, self, extra) =>
             {
                 Debug.Log($"Run.BeginGameOver isWin: {extra.isWin}");
                 orig(self, extra);
             };
+            */
+
+            
+
+            //Debug.Log("Tasks: End of SetGameHooks");
 
         }
 
@@ -642,7 +705,7 @@ namespace Tasks
         {
             if (tasksUIObjects[taskIndex] is null)
             {
-                tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, hud.objectivePanelController.transform);
+                tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, panel.objectiveTrackerContainer.transform); // old: hud.objectivePanelController.transform
                 // rewards is totalNumTasks long
                 // taskIndex is like 6 at most.
                 int rewardIndex = currentTasks[taskIndex].taskType;
@@ -677,7 +740,7 @@ namespace Tasks
                 else if (rewards[rewardIndex].type == RewardType.Drone)
                 {
                     string path = RewardBuilder.GetDroneTexturePath(rewards[rewardIndex].dronePath);
-                    icon.image.texture = Resources.Load<Texture>(path);
+                    icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
                 }
             }
             tasksUIObjects[taskIndex].SetActive(true);
@@ -1008,7 +1071,7 @@ namespace Tasks
                 // as you choose tasks, remove them from the list
                 float r = UnityEngine.Random.value;
                 results[i] = (int)types.Evaluate(r);
-                int index = types.EvaluteToChoiceIndex(r);
+                int index = types.EvaluateToChoiceIndex(r);
                 types.RemoveChoice(index);
             }
 
@@ -1029,6 +1092,7 @@ namespace Tasks
                     TaskType taskType = (TaskType)task;
 
                     GameObject go = new GameObject($"{taskType:g} completed notification");
+
                     Notification n = go.AddComponent<Notification>();
                     n.enabled = false;
                     // default scale is 1.3
@@ -1039,7 +1103,18 @@ namespace Tasks
 
                     // 425, 326 + 1.5fx is alright. Long titles might bleed over into the objective panel
                     n.GenericNotification.transform.localPosition = new Vector3(435, 326, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
-                    n.RootObject.transform.Find("TextArea").transform.localScale = Vector3.one * 1.5f; // embiggen text
+                    
+                    // Find("CanvasGroup").Find("TextArea");
+                    Transform cGroup = n.RootObject.transform.Find("CanvasGroup");
+                    if(cGroup)
+                    {
+                        Transform tArea = cGroup.Find("TextArea");
+                        if(tArea)
+                        {
+                            tArea.transform.localScale = Vector3.one * 1.5f; // embiggen text
+                        }
+                    }
+                    //n.RootObject.transform.Find("CanvasGroup").Find("TextArea").transform.localScale = Vector3.one * 1.5f; // embiggen text
 
                     break;
                 }
@@ -1175,7 +1250,10 @@ namespace Tasks
                 {
                     //Chat.AddMessage("commandCubePrefab is null"); // always null??? Is GetField wrong? GetMember GetProperty GetFieldCached???
                 }
-                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                //icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
+                //typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", RoR2.LegacyResourcesAPI.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+
                 // need to make an item droplet. Specifically have it hit the ground
                 PickupDropletController.onDropletHitGroundServer += TurnOffCommand;
                 // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
@@ -1191,6 +1269,7 @@ namespace Tasks
             else
             {
                 // give gold or xp
+                //playerCharacterMasters[playerNum].inventory
             }
         }
 
