@@ -134,6 +134,9 @@ namespace Tasks
         {
             CharacterBody playerBody = TasksPlugin.GetPlayerCharacterMaster(playerNum).GetBody();
 
+            // new style of loading
+            // Addressables.LoadAssetAsync<GameObject>(key: "RoR2/Base/WarCryOnMultiKill/WarCryEffect.prefab").WaitForCompletion()
+            // but this seems to still work
             GameObject groundDrone = DirectorCore.instance.TrySpawnObject(new DirectorSpawnRequest(Resources.Load<SpawnCard>("SpawnCards/InteractableSpawnCard/" +droneSpawnCardName), new DirectorPlacementRule
             {
                 placementMode = DirectorPlacementRule.PlacementMode.NearestNode,

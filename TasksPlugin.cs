@@ -718,10 +718,49 @@ namespace Tasks
                 }
 
                 ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
-                icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
+                //icon.image.color = Color.white;
+                // old version
+                //icon.SetItemIndex(rewards[rewardIndex].item.itemIndex, rewards[rewardIndex].numItems);
+                icon.SetItemIndex(PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex, rewards[rewardIndex].numItems);
+                // SetItemIndex does this already so this shouldn't help
+                //icon.image.texture = ItemCatalog.GetItemDef(PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex).pickupIconTexture;
+                // test
+                // itemIndex is private
+                //icon.SetItemIndex(itemIconPrefabCopy.GetComponent<ItemIcon>().itemIndex, rewards[rewardIndex].numItems);
 
+                //PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex
                 RectTransform rect = icon.rectTransform;
+                //Debug.Log($"rect is {rect} scale is {rect.localScale} pos is {rect.localPosition}");
                 rect.localScale = Vector3.one * 0.5f;
+                rect.localPosition = new Vector3(-113, 0, 0); // didn't work
+                //Debug.Log($"after set, rect is {rect} scale is {rect.localScale} pos is {rect.localPosition}");
+
+                //Debug.Log($"cached rect: {icon.rectTransform} scale is {icon.rectTransform.localScale} pos is {icon.rectTransform.localPosition}");
+                icon.rectTransform.localScale = Vector3.one * 0.5f;
+                icon.rectTransform.localPosition = new Vector3(-113, 0, 0);
+                //Debug.Log($"after set, cached rect: {icon.rectTransform} scale is {icon.rectTransform.localScale} pos is {icon.rectTransform.localPosition}");
+                /*
+                if(icon.image)
+                {
+                    Debug.Log($"image is {icon.image}");
+
+                }
+                if(icon.glowImage)
+                {
+                    // the inventory icons don't have glow either
+                    Debug.Log($"glow is {icon.glowImage}");
+
+                }
+                */
+
+                /*
+[Info   : Unity Log] rect is ItemIcon(Clone) (UnityEngine.RectTransform) scale is (1.0, 1.0, 1.0) pos is (-77.0, 16.9, 0.0)
+[Info   : Unity Log] after set, rect is ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
+[Info   : Unity Log] cached rest: ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
+[Info   : Unity Log] after set, cached rest: ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
+[Info   : Unity Log] image is ItemIcon(Clone) (UnityEngine.UI.RawImage)
+                 */
+                // then the pos changes sometime after this
 
                 Image checkBox = tasksUIObjects[taskIndex].transform.Find("Checkbox").GetComponent<Image>();
                 checkBox.color = new Color(0, 0, 0, 0); // invisible
@@ -892,7 +931,11 @@ namespace Tasks
             if (winnerName == "")
                 return;
   
-            var copy = Instantiate(ogLabel, ogLabel.parent);
+            // old version
+            //var copy = Instantiate(ogLabel, ogLabel.parent);
+            var copy = Instantiate(ogLabel, ogLabel);
+            copy.localPosition = Vector3.zero;
+            copy.localScale = Vector3.one * 1.25f;
             TMPro.TextMeshProUGUI tmpLabel = copy.GetComponent<TMPro.TextMeshProUGUI>();
 
             // this copies the progress bar as well
@@ -1092,7 +1135,7 @@ namespace Tasks
                     TaskType taskType = (TaskType)task;
 
                     GameObject go = new GameObject($"{taskType:g} completed notification");
-
+                    StartCoroutine(DestroyLater(go, 6));
                     Notification n = go.AddComponent<Notification>();
                     n.enabled = false;
                     // default scale is 1.3
@@ -1102,7 +1145,8 @@ namespace Tasks
                     n.enabled = true;
 
                     // 425, 326 + 1.5fx is alright. Long titles might bleed over into the objective panel
-                    n.GenericNotification.transform.localPosition = new Vector3(435, 326, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
+                    // new: 435, 105 want: 435, 50. So this needs to be 435, 326-55 = 270
+                    n.GenericNotification.transform.localPosition = new Vector3(435, 270, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
                     
                     // Find("CanvasGroup").Find("TextArea");
                     Transform cGroup = n.RootObject.transform.Find("CanvasGroup");
@@ -1111,13 +1155,27 @@ namespace Tasks
                         Transform tArea = cGroup.Find("TextArea");
                         if(tArea)
                         {
-                            tArea.transform.localScale = Vector3.one * 1.5f; // embiggen text
+                            // old: 1.5
+                            tArea.transform.localScale = Vector3.one * 1.25f; // embiggen text
                         }
                     }
                     //n.RootObject.transform.Find("CanvasGroup").Find("TextArea").transform.localScale = Vector3.one * 1.5f; // embiggen text
 
                     break;
                 }
+            }
+        }
+
+        IEnumerator DestroyLater(GameObject g, float time)
+        {
+            yield return new WaitForSeconds(time);
+            if (g)
+            {
+                Destroy(g);
+            }
+            else
+            {
+                Debug.Log("Destroy later didn't work");
             }
         }
 
@@ -1222,8 +1280,12 @@ namespace Tasks
                 return;
             if(rewards[(int)task].type == RewardType.Item)
             {
-                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
-               
+                //PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex
+                // old version
+                //playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(PickupCatalog.GetPickupDef(rewards[(int)task].item).itemIndex, rewards[(int)task].numItems);
+                //PickupCatalog.GetPickupDef(rewards[(int)task].item).itemIndex
+
                 // show text in chat
                 PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
 
@@ -1233,7 +1295,9 @@ namespace Tasks
             }
             else if(rewards[(int)task].type == RewardType.TempItem)
             {
-                playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
+                // old version
+                //playerCharacterMasters[playerNum].inventory.GiveItem(rewards[(int)task].item.itemIndex, rewards[(int)task].numItems);
+                playerCharacterMasters[playerNum].inventory.GiveItem(PickupCatalog.GetPickupDef(rewards[(int)task].item).itemIndex, rewards[(int)task].numItems);
 
                 PickupDef pickDef = PickupCatalog.GetPickupDef(rewards[(int)task].item);
                 
@@ -1317,7 +1381,11 @@ namespace Tasks
                     // don't really want to spam chat. Multiple players might be losing multiple different items.
                     // could be local so you only see your own losses. That would be more work. This code runs on the server, not locally.
                     Debug.Log($"Removing {toRemove} {temp.item:g}");
-                    playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, toRemove);
+                    // old version
+                    //playerCharacterMasters[i].inventory.RemoveItem(temp.item.itemIndex, toRemove);
+                    playerCharacterMasters[i].inventory.RemoveItem(PickupCatalog.GetPickupDef(temp.item).itemIndex, toRemove);
+                    //PickupCatalog.GetPickupDef(temp.item).itemIndex
+                    //PickupCatalog.GetPickupDef(temp.item).itemIndex
                     if (temp.count <= 0)
                     {
                         list.RemoveAt(0);
