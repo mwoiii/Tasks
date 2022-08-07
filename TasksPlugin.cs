@@ -703,20 +703,29 @@ namespace Tasks
 
         void UpdateTasksUI(int taskIndex, string text = "")
         {
+            //TMPro.TextMeshProUGUI textMeshLabel = tasksUIObjects[taskIndex].transform.Find("Label").GetComponent<TMPro.TextMeshProUGUI>();
+
             if (tasksUIObjects[taskIndex] is null)
             {
-                tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, panel.objectiveTrackerContainer.transform); // old: hud.objectivePanelController.transform
+
+                tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, panel.objectiveTrackerContainer.transform.parent); // old: hud.objectivePanelController.transform
                 // rewards is totalNumTasks long
                 // taskIndex is like 6 at most.
                 int rewardIndex = currentTasks[taskIndex].taskType;
 
                 tasksUIObjects[taskIndex].SetActive(true);
 
+                /*
+                // update broke all this and I couldn't get it to work
                 if (itemIconPrefabCopy is null)
                 {
                     itemIconPrefabCopy = FindObjectOfType<ItemInventoryDisplay>().itemIconPrefab;
                 }
+                // RoR2/Base/AlienHead/AlienHead.asset
+                //Addressables.LoadAssetAsync<GameObject>(key: "RoR2/Base/WarCryOnMultiKill/WarCryEffect.prefab").WaitForCompletion()
 
+                //GameObject iconCopy = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform);
+                //ItemIcon icon = iconCopy.GetComponent<ItemIcon>();
                 ItemIcon icon = Instantiate(itemIconPrefabCopy, tasksUIObjects[taskIndex].transform).GetComponent<ItemIcon>();
                 //icon.image.color = Color.white;
                 // old version
@@ -739,28 +748,36 @@ namespace Tasks
                 icon.rectTransform.localScale = Vector3.one * 0.5f;
                 icon.rectTransform.localPosition = new Vector3(-113, 0, 0);
                 //Debug.Log($"after set, cached rect: {icon.rectTransform} scale is {icon.rectTransform.localScale} pos is {icon.rectTransform.localPosition}");
-                /*
-                if(icon.image)
-                {
-                    Debug.Log($"image is {icon.image}");
 
-                }
-                if(icon.glowImage)
-                {
-                    // the inventory icons don't have glow either
-                    Debug.Log($"glow is {icon.glowImage}");
-
-                }
+                icon.image.uvRect = new Rect(0, 0, 1, 1);
                 */
 
-                /*
-[Info   : Unity Log] rect is ItemIcon(Clone) (UnityEngine.RectTransform) scale is (1.0, 1.0, 1.0) pos is (-77.0, 16.9, 0.0)
-[Info   : Unity Log] after set, rect is ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
-[Info   : Unity Log] cached rest: ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
-[Info   : Unity Log] after set, cached rest: ItemIcon(Clone) (UnityEngine.RectTransform) scale is (0.5, 0.5, 0.5) pos is (-113.0, 0.0, 0.0)
-[Info   : Unity Log] image is ItemIcon(Clone) (UnityEngine.UI.RawImage)
-                 */
-                // then the pos changes sometime after this
+                // new version
+                // make my own sprite and text for x5 items
+                GameObject rewardIconGO = new GameObject($"Reward Icon");
+                Image i = rewardIconGO.AddComponent<Image>();
+                i.sprite = ItemCatalog.GetItemDef(PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex).pickupIconSprite;
+
+                Transform labelTrans = tasksUIObjects[taskIndex].transform.Find("Label").transform;
+
+                rewardIconGO.transform.parent = labelTrans;
+                rewardIconGO.transform.localPosition = new Vector3(-75, 0, 0);
+                rewardIconGO.transform.localScale = new Vector3(0.25f, 0.25f, 1);
+                rewardIconGO.transform.localRotation = Quaternion.identity;
+
+                if (rewards[rewardIndex].numItems > 1)
+                {
+                    GameObject stackSize = new GameObject($"Stack Size");
+                    HGTextMeshProUGUI textMesh = stackSize.AddComponent<HGTextMeshProUGUI>();
+                    textMesh.text = "x" + rewards[rewardIndex].numItems;
+
+                    stackSize.transform.parent = labelTrans;
+                    stackSize.transform.localPosition = new Vector3(-40, 10, 0);
+                    stackSize.transform.localScale = Vector3.one * 0.25f;
+                    stackSize.transform.localRotation = Quaternion.identity;
+                }
+
+
 
                 Image checkBox = tasksUIObjects[taskIndex].transform.Find("Checkbox").GetComponent<Image>();
                 checkBox.color = new Color(0, 0, 0, 0); // invisible
@@ -779,7 +796,11 @@ namespace Tasks
                 else if (rewards[rewardIndex].type == RewardType.Drone)
                 {
                     string path = RewardBuilder.GetDroneTexturePath(rewards[rewardIndex].dronePath);
-                    icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
+                    //icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
+                    Texture droneTex = Resources.Load<Texture>(path);
+                    Sprite droneSprite = Sprite.Create((Texture2D)droneTex, new Rect(0.0f, 0.0f, droneTex.width, droneTex.height), new Vector2(0.5f, 0.5f), 100.0f);
+
+                    i.sprite = droneSprite;
                 }
             }
             tasksUIObjects[taskIndex].SetActive(true);
@@ -789,6 +810,7 @@ namespace Tasks
             {
                 textMeshLabel.text = (text == "") ? currentTasks[taskIndex].description : text;
             }
+            
 
             tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
             rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform, "RivalBar");
