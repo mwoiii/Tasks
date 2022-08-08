@@ -38,7 +38,7 @@ namespace Tasks
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "1.0.0";
+            VERSION = "1.1.0";
 
         public static TasksPlugin instance;
 
@@ -760,7 +760,7 @@ namespace Tasks
 
                 Transform labelTrans = tasksUIObjects[taskIndex].transform.Find("Label").transform;
 
-                rewardIconGO.transform.parent = labelTrans;
+                rewardIconGO.transform.SetParent(labelTrans, false);
                 rewardIconGO.transform.localPosition = new Vector3(-75, 0, 0);
                 rewardIconGO.transform.localScale = new Vector3(0.25f, 0.25f, 1);
                 rewardIconGO.transform.localRotation = Quaternion.identity;
@@ -771,9 +771,9 @@ namespace Tasks
                     HGTextMeshProUGUI textMesh = stackSize.AddComponent<HGTextMeshProUGUI>();
                     textMesh.text = "x" + rewards[rewardIndex].numItems;
 
-                    stackSize.transform.parent = labelTrans;
+                    stackSize.transform.SetParent(labelTrans, false);
                     stackSize.transform.localPosition = new Vector3(-40, 10, 0);
-                    stackSize.transform.localScale = Vector3.one * 0.25f;
+                    stackSize.transform.localScale = Vector3.one * 0.3f;
                     stackSize.transform.localRotation = Quaternion.identity;
                 }
 
@@ -956,6 +956,7 @@ namespace Tasks
             // old version
             //var copy = Instantiate(ogLabel, ogLabel.parent);
             var copy = Instantiate(ogLabel, ogLabel);
+            copy.gameObject.name = "WinnerName";
             copy.localPosition = Vector3.zero;
             copy.localScale = Vector3.one * 1.25f;
             TMPro.TextMeshProUGUI tmpLabel = copy.GetComponent<TMPro.TextMeshProUGUI>();
@@ -965,6 +966,8 @@ namespace Tasks
             Destroy(tmpLabel.transform.Find("ProBar").gameObject);
             // destroy the rival bar too
             Destroy(tmpLabel.transform.Find("RivalBar").gameObject);
+
+            Destroy(tmpLabel.transform.Find("Reward Icon").gameObject);
 
 
             tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
@@ -1168,8 +1171,20 @@ namespace Tasks
 
                     // 425, 326 + 1.5fx is alright. Long titles might bleed over into the objective panel
                     // new: 435, 105 want: 435, 50. So this needs to be 435, 326-55 = 270
-                    n.GenericNotification.transform.localPosition = new Vector3(435, 270, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
-                    
+                    n.GenericNotification.transform.localPosition = new Vector3(435, 330, 0) + 1.5f * tasksUIObjects[i].transform.localPosition;
+                    // might be better to parent it to the task is corresposds with instead of messing with differing coordinate systems
+
+                    // parent it to the task UI
+                    // When I do this, get a bunch of nulls
+                    // This object doesn't have any UI attached to it.
+                    /*
+                    Debug.Log($"i: {i} /Length: {tasksUIObjects.Length}");
+                    Transform label = tasksUIObjects[i].transform.Find("Label").transform;
+                    go.transform.SetParent(label, true);
+                    go.transform.localPosition = new Vector3(-270, 20, 0);
+                    go.transform.localScale = Vector3.one * 0.6f;
+                    */
+
                     // Find("CanvasGroup").Find("TextArea");
                     Transform cGroup = n.RootObject.transform.Find("CanvasGroup");
                     if(cGroup)
