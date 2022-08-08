@@ -61,3 +61,5 @@ You can increase how many tasks are active each stage, but I don't really recomm
 ## Changelog
 
 1.0.0 - the mod probably works. The UI is bad and there are probably bugs.
+
+1.1.0 - Updated to work with SoTV Update
