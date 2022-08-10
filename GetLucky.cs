@@ -18,7 +18,7 @@ namespace Tasks
 
         public override bool CanActivate(int numPlayers)
         {
-            return numPlayers > 1;
+            return true; // numPlayers > 1;
         }
 
         public override string GetDescription()
@@ -54,6 +54,10 @@ namespace Tasks
         void Evaluate()
         {
             int r = UnityEngine.Random.Range(0, totalNumberPlayers); //[inclusive, exclusinve)
+            if(totalNumberPlayers == 1)
+            {
+                r = UnityEngine.Random.Range(0, 4);
+            }
             // should probably say something in chat
             // like "Rolling...."
             // wait 2 sec
@@ -105,10 +109,16 @@ namespace Tasks
             yield return new WaitForSeconds(1.5f);
             // congrats ???
             //string name = Util.GetBestBodyNameColored(TasksPlugin.GetPlayerCharacterMaster(playerNum).gameObject);
-            string name = Util.GetBestMasterName(TasksPlugin.GetPlayerCharacterMaster(playerNum));
+            string name = "Nobody";
+
+            if(totalNumberPlayers > 1 || playerNum == 0)
+            {
+                name = Util.GetBestMasterName(TasksPlugin.GetPlayerCharacterMaster(playerNum));
+
+                CompleteTask(playerNum);
+            }
             ChatMessage.Send(GetWinFlavourMessage(name));
 
-            CompleteTask(playerNum);
         }
     }
 }

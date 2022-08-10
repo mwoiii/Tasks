@@ -238,7 +238,7 @@ namespace Tasks
             // Update ConfigManager with the new task (kinda optional. Won't break if you don't)
             
             Debug.Log("Creating Task Objects");
-            taskCopies = new Task[26];
+            taskCopies = new Task[27];
 
             AirKills airKills = new AirKills();
             DamageMultipleTargets task2 = new DamageMultipleTargets();
@@ -266,6 +266,7 @@ namespace Tasks
             KillStreak task24 = new KillStreak();
             QuickDraw task25 = new QuickDraw();
             FarKill task26 = new FarKill();
+            FewElites task27 = new FewElites();
 
             // Make the array bigger. Equal to whatever the last name is
 
@@ -296,6 +297,7 @@ namespace Tasks
             taskCopies[(int)task24.type - 1] = task24;
             taskCopies[(int)task25.type - 1] = task25;
             taskCopies[(int)task26.type - 1] = task26;
+            taskCopies[(int)task27.type - 1] = task27;
 
 
 

@@ -42,6 +42,7 @@ namespace Tasks
         public static ConfigEntry<float> KillStreakWeight { get; set; }
         public static ConfigEntry<float> QuickDrawWeight { get; set; }
         public static ConfigEntry<float> FarKillWeight { get; set; }
+        public static ConfigEntry<float> FewEliteWeight { get; set; }
 
 
 
@@ -242,7 +243,13 @@ namespace Tasks
                 "TaskWeights",
                 "FarKill",
                 1.0f,
-                "Relative weight of this task. Kill something far away from where you last lef the ground"
+                "Relative weight of this task. Kill something far away from where you last left the ground"
+                );
+            FewEliteWeight = config.Bind<float>(
+                "TaskWeights",
+                "FewElites",
+                1.0f,
+                "Relative weight of this task. Kill the boss before you kill 10 elites"
                 );
         }
 
@@ -327,6 +334,9 @@ namespace Tasks
 
                 case TaskType.FarKill:
                     return FarKillWeight.Value;
+
+                case TaskType.FewElites:
+                    return FewEliteWeight.Value;
             }
             return 1;
         }

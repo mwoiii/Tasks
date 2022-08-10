@@ -18,9 +18,11 @@ namespace Tasks
         bool[] playerFailed;
         int numPlayersFailed;
 
+        bool alreadyAwarded;
+
         public override bool CanActivate(int numPlayers)
         {
-            return numPlayers > 1;
+            return true; // numPlayers > 1;
         }
 
         public override string GetDescription()
@@ -41,6 +43,7 @@ namespace Tasks
             drones = new CharacterMaster[numPlayers];
             playerFailed = new bool[numPlayers];
             numPlayersFailed = 0;
+            alreadyAwarded = false;
 
             for (int i = 0; i < numPlayers; i++)
             {
@@ -70,8 +73,21 @@ namespace Tasks
 
         void Evaluate()
         {
+            /*
             // end of stage. Are there multiple winners?
             if (totalNumberPlayers - numPlayersFailed > 1)
+            {
+                for (int i = 0; i < playerFailed.Length; i++)
+                {
+                    if (!playerFailed[i])
+                    {
+                        UpdateProgressMultiWinner();
+                        CompleteTask(i);
+                    }
+                }
+            }
+            */
+            if(!alreadyAwarded)
             {
                 for (int i = 0; i < playerFailed.Length; i++)
                 {
@@ -91,7 +107,14 @@ namespace Tasks
                 // if you've failed, your bar is 0
                 // if you haven't, bar shows how many people have failed.
                 // when it fills up, that means you won
-                progress[i] = playerFailed[i] ? 0 : (numPlayersFailed / (totalNumberPlayers - 1));
+                if (totalNumberPlayers > 1)
+                {
+                    progress[i] = playerFailed[i] ? 0 : (numPlayersFailed / (totalNumberPlayers - 1));
+                }
+                else
+                {
+                    progress[i] = 0;
+                }
             }
             base.UpdateProgress(progress);
         }
@@ -117,21 +140,32 @@ namespace Tasks
                     if (damageReport.victimMaster == drones[i])
                     {
                         //Chat.AddMessage(GetDroneDeathMessage(drones[i].name));
-                        R2API.Utils.ChatMessage.Send(GetDroneDeathMessage(drones[i].name)); // should go to each player?
+                        
+
+                        string token = $"BABY_DRONE_{i}";
+
+                        R2API.Utils.ChatMessage.Send(GetDroneDeathMessage(Language.currentLanguage.GetLocalizedStringByToken(token)));
+                        //R2API.Utils.ChatMessage.Send(GetDroneDeathMessage(drones[i].name)); // should go to each player?
                         
                         // a drone died
                         playerFailed[i] = true;
                         numPlayersFailed++;
                         UpdateProgress();
                         //Chat.AddMessage($"Player {i} failed Baby Drone");
-                        if(numPlayersFailed >= totalNumberPlayers-1)
+                        if (totalNumberPlayers > 1)
                         {
-                            for (int j = 0; j < playerFailed.Length; j++)
+                            if (numPlayersFailed >= totalNumberPlayers - 1)
                             {
-                                if(!playerFailed[j])
+                                for (int j = 0; j < playerFailed.Length; j++)
                                 {
-                                    CompleteTask(j);
-                                    return;
+                                    if (!playerFailed[j])
+                                    {
+                                        // all but 1 drone has died
+                                        // give them the reward early
+                                        alreadyAwarded = true;
+                                        CompleteTask(j);
+                                        return;
+                                    }
                                 }
                             }
                         }

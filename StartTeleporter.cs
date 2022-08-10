@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Text;
 using RoR2;
@@ -13,9 +14,14 @@ namespace Tasks
         public override TaskType type { get; } = TaskType.StartTele;
         protected override string name { get; } = "Activate the Teleporter";
 
+        float soloTimer;
+        float soloTimeAmountSec = 60;
+        bool hasFailed = false;
+        bool succeeded = false;
+
         public override bool CanActivate(int numPlayers)
         {
-            return numPlayers > 1;
+            return true; // numPlayers > 1;
         }
 
         public override string GetDescription()
@@ -36,6 +42,10 @@ namespace Tasks
 
             GlobalEventManager.OnInteractionsGlobal += OnInteraction;
 
+            if(numPlayers == 1)
+            {
+                StartSolo();
+            }
         }
 
         protected override void Unhook()
@@ -58,8 +68,66 @@ namespace Tasks
 
             if (go?.GetComponent<TeleporterInteraction>())
             {
-                CompleteTask(player);
+                Evaluate(player);
+                
             }
         }
+
+        void StartSolo()
+        {
+            if(TasksPlugin.instance)
+            {
+                TasksPlugin.instance.StartCoroutine(Countdown());
+            }
+        }
+
+        IEnumerator Countdown()
+        {
+            hasFailed = false;
+            succeeded = false;
+            soloTimer = soloTimeAmountSec;
+
+            for (int i = 0; i < soloTimeAmountSec; i++)
+            {
+                // this probably keeps counting if you press esc tp pause
+                // but maybe it doesn't. Either way, oh well
+                yield return new WaitForSeconds(1);
+                soloTimer -= 1;
+                UpdateProgressSolo();
+            }
+            hasFailed = true;
+        }
+
+        void Evaluate(int playerNum)
+        {
+            if(totalNumberPlayers > 1)
+            {
+                CompleteTask(playerNum);
+                return;
+            }
+
+            if(!hasFailed)
+            {
+                succeeded = true;
+                CompleteTask(playerNum);
+            }
+
+        }
+
+        void UpdateProgressSolo()
+        {
+            if (succeeded)
+            {
+                progress[0] = 1;
+            }
+            else
+            {
+                progress[0] = Mathf.Max(0, soloTimer / soloTimeAmountSec);
+            }
+
+            base.UpdateProgress(progress);
+        }
+
+        
     }
 }

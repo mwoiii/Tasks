@@ -64,6 +64,8 @@ namespace Tasks
 
         void OnKill(DamageReport report)
         {
+            if (report is null) return;
+            if (report.attackerMaster is null) return;
             if (report.attackerMaster.playerCharacterMasterController is null) return;
             int playerNum = TasksPlugin.GetPlayerNumber(report.attackerMaster);
 
