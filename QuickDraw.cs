@@ -44,6 +44,8 @@ namespace Tasks
 
         void OnKill(DamageReport report)
         {
+            if (report is null) return;
+            if (report.attackerMaster is null) return;
             if (report.attackerMaster.playerCharacterMasterController is null) return;
             float time = Run.FixedTimeStamp.now.t - report.victimBody.localStartTime.t;
             //Debug.Log($"Player killed something. Alive: {report.victimBody.localStartTime.t} CurrentTime: {Run.FixedTimeStamp.now.t} Diff: {time}");

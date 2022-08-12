@@ -13,7 +13,7 @@ namespace Tasks
         protected override string name { get; } = "Few Elites";
 
         int[] kills;
-        int maxKills = 10;
+        int maxKills = 5;
         bool taskFinished = false;
 
         public override bool CanActivate(int numPlayers)
@@ -23,11 +23,15 @@ namespace Tasks
 
         public override string GetDescription()
         {
-            return "Kill the boss before you kill 10 elites.";
+            return "Kill the boss before you kill 5 elites.";
         }
 
         public override string GetWinMessage(int winningPlayer)
         {
+            if(winningPlayer < 0)
+            {
+                return $"You failed {GetStylizedTaskName(name)} by killing too many elites.";
+            }
             return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by killing the boss while only killing {GetStylizedTaskWinStat(kills[winningPlayer].ToString())}/{maxKills} elites.";
         }
 

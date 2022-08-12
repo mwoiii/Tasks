@@ -25,7 +25,7 @@ namespace Tasks
         CharacterBody[] bodies;
 
         float[] timeInAir;
-        float timeToStayInAir = 5;
+        float timeToStayInAir;
 
         public override string GetDescription()
         {
@@ -34,7 +34,7 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
-            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by staying in the air for {GetStylizedTaskWinStat(timeToStayInAir.ToString())}s.";
+            return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by staying in the air for {GetStylizedTaskWinStat(timeToStayInAir.ToString("0.00"))}s.";
         }
 
         protected override void SetHooks(int numPlayers)
@@ -43,7 +43,7 @@ namespace Tasks
 
             base.SetHooks(numPlayers);
 
-            timeToStayInAir = 3 + Run.instance.difficultyCoefficient;
+            timeToStayInAir = 2 + Run.instance.difficultyCoefficient;
 
             if (timeInAir is null || timeInAir.Length != numPlayers)
             {

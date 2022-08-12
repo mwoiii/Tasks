@@ -15,7 +15,7 @@ namespace Tasks
         protected override string name { get; } = "Activate the Teleporter";
 
         float soloTimer;
-        float soloTimeAmountSec = 60;
+        float soloTimeAmountSec = 90;
         bool hasFailed = false;
         bool succeeded = false;
 
@@ -31,6 +31,10 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
+            if(winningPlayer < 0)
+            {
+                return $"You failed {GetStylizedTaskName(name)} by not getting to the {GetStylizedTaskWinStat("teleporter")} in {GetStylizedTaskWinStat(soloTimeAmountSec.ToString())} seconds.";
+            }
             return $"{GetStylizedName(winningPlayer)} completed {GetStylizedTaskName(name)} by triggering the {GetStylizedTaskWinStat("teleporter")} first.";
         }
 

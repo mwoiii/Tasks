@@ -1017,8 +1017,20 @@ namespace Tasks
 
             Destroy(tmpLabel.transform.Find("Reward Icon").gameObject);
 
+            int rotationMultiplier = 1;
+            if(winnerName == "FAILURE")
+            {
+                rotationMultiplier = -1;
 
-            tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
+                // teleporter text is
+                // EE807F
+                // rgb(238, 128, 127)
+                tmpLabel.color = new Color(0.93f, 0.5f, 0.5f);
+
+                // doesn't seem to work with tmpro
+                //winnerName = $"<style=cIsHealth>{winnerName}</style>"; // health is light red
+            }
+            tmpLabel.transform.RotateAround(tmpLabel.transform.position, Vector3.forward, 15 * rotationMultiplier); // 20 looks weird at 15 char, but normal at 6 char. Maybe 15 looks good at both?
             tmpLabel.fontStyle = TMPro.FontStyles.Normal; 
             tmpLabel.fontSizeMax = 18;
             //winnerName = winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName + winnerName;

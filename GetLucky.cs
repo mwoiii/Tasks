@@ -86,6 +86,7 @@ namespace Tasks
         string GetWinFlavourMessage(string playerName)
         {
             WeightedSelection<string> messages = new WeightedSelection<string>();
+            playerName = GetStylizedTaskName(playerName);
             messages.AddChoice($"{playerName} won!", 1);
             messages.AddChoice($"{playerName} was the lucky one!", 1);
             messages.AddChoice($"Congrats, {playerName}.", 1);

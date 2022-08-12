@@ -32,6 +32,10 @@ namespace Tasks
 
         public override string GetWinMessage(int winningPlayer)
         {
+            if(winningPlayer < 0)
+            {
+                return $"You failed {GetStylizedTaskName(name)} by letting your drone die.";
+            }
             return $"{GetStylizedName(winningPlayer)} kept their drone alive the longest. Completed {GetStylizedTaskName(name)}.";
         }
 
