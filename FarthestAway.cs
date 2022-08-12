@@ -50,8 +50,16 @@ namespace Tasks
 
             for (int i = 0; i < startPositions.Length; i++)
             {
-                // probably broken if one player DCs
-                startPositions[i] = TasksPlugin.GetPlayerCharacterMaster(i).GetBody().transform.position;
+                if (TasksPlugin.GetPlayerCharacterMaster(i).GetBody() is null)
+                {
+                    Debug.Log($"Task.FarthestAway player body is null. Player: {i}");
+                    startPositions[i] = Vector3.zero;
+                }
+                else
+                {
+                    // probably broken if one player DCs
+                    startPositions[i] = TasksPlugin.GetPlayerCharacterMaster(i).GetBody().transform.position;
+                }
 
                 // are they up in the air?
                 // doesn't seem to be. 

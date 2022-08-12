@@ -38,7 +38,7 @@ namespace Tasks
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "1.1.0";
+            VERSION = "1.2.0";
 
         public static TasksPlugin instance;
 
@@ -78,6 +78,8 @@ namespace Tasks
         ObjectivePanelController panel;
         GameObject itemIconPrefabCopy;
 
+        bool rectWasAlreadyNull = false;
+        bool rivalRectWasAlreadyNull = false;
 
         [System.Diagnostics.CodeAnalysis.SuppressMessage("Code Quality", "IDE0051:Remove unused private members", Justification = "Awake is automatically called by Unity")]
         private void Awake() //Called when loaded by BepInEx.
@@ -190,9 +192,13 @@ namespace Tasks
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
-            Debug.Log($"Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
+            Debug.Log($"Tasks mod: Number of players: {run.participatingPlayerCount} Living Players: {run.livingPlayerCount}");
             totalNumPlayers = run.participatingPlayerCount;
             playerCharacterMasters = new List<CharacterMaster>(totalNumPlayers);
+
+            // debugging stuff. So that it doesn't spam so much
+            rectWasAlreadyNull = false;
+            rivalRectWasAlreadyNull = false;
 
             PopulatePlayerCharaterMasterList();
 
@@ -566,6 +572,10 @@ namespace Tasks
                 {
                     Debug.Log("Panel is null in HudObjSetter.Update");
                 }
+                if(self.objectivePanelController is null)
+                {
+                    Debug.Log("Task mod: objectivePanelController was null");
+                }
                 if (self.objectivePanelController)
                 {
                     panel = self.objectivePanelController;
@@ -709,12 +719,28 @@ namespace Tasks
 
             if (tasksUIObjects[taskIndex] is null)
             {
-
+                if(panel.objectiveTrackerPrefab is null)
+                {
+                    Debug.Log("Task mod: panel.objectiveTrackerPrefab was null");
+                }
+                if(panel.objectiveTrackerContainer is null)
+                {
+                    Debug.Log("Task mod: panel.objectiveTrackerContiner was null");
+                }
+                // do clients not have panel? They should
                 tasksUIObjects[taskIndex] = Instantiate(panel.objectiveTrackerPrefab, panel.objectiveTrackerContainer.transform.parent); // old: hud.objectivePanelController.transform
                 // rewards is totalNumTasks long
                 // taskIndex is like 6 at most.
+                if(currentTasks[taskIndex] is null)
+                {
+                    Debug.Log($"Task mod: currentTasks was null at UpdateTasksUI index: {taskIndex}");
+                }
                 int rewardIndex = currentTasks[taskIndex].taskType;
 
+                if(tasksUIObjects[taskIndex] is null)
+                {
+                    Debug.Log("Task mod: Instantiate UIObject failed");
+                }
                 tasksUIObjects[taskIndex].SetActive(true);
 
                 /*
@@ -761,6 +787,10 @@ namespace Tasks
                 i.sprite = ItemCatalog.GetItemDef(PickupCatalog.GetPickupDef(rewards[rewardIndex].item).itemIndex).pickupIconSprite;
 
                 Transform labelTrans = tasksUIObjects[taskIndex].transform.Find("Label").transform;
+                if(labelTrans is null)
+                {
+                    Debug.Log("Task mod: UpdateTasksUI() couldn't find label transform");
+                }
 
                 rewardIconGO.transform.SetParent(labelTrans, false);
                 rewardIconGO.transform.localPosition = new Vector3(-75, 0, 0);
@@ -812,7 +842,12 @@ namespace Tasks
             {
                 textMeshLabel.text = (text == "") ? currentTasks[taskIndex].description : text;
             }
-            
+            else
+            {
+                Debug.Log("Task mod: UpdateTasksUI() textMeshLabel was null");
+
+            }
+
 
             tasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform);
             rivalTasksUIRects[taskIndex] = CreateTaskProgressBar(textMeshLabel.transform, "RivalBar");
@@ -866,7 +901,13 @@ namespace Tasks
         {
             if(rect is null)
             {
-                Debug.Log("Rect was null");
+                if (!rectWasAlreadyNull)
+                {
+                    // this is to suppress extra debug noise
+                    // also means I'll probably never notice this error in a huge log file
+                    rectWasAlreadyNull = true;
+                    Debug.Log("Task mod: Rect was null");
+                }
                 return;
             }
             // rect can be non null, but then sizeDelta is null??
@@ -882,7 +923,12 @@ namespace Tasks
         {
             if (rect is null)
             {
-                Debug.Log("Rect was null in rival");
+                if (!rivalRectWasAlreadyNull)
+                {
+                    // only output this message once.
+                    rivalRectWasAlreadyNull = true;
+                    Debug.Log("Task mod: Rect was null in rival");
+                }
                 return;
             }
             // this variant is specifically for the rival rect to change the colour and layering
@@ -1234,11 +1280,19 @@ namespace Tasks
 
         public static CharacterMaster GetPlayerCharacterMaster(int playerNum)
         {
+            if(playerNum < 0 || playerNum >= playerCharacterMasters.Count)
+            {
+                Debug.Log($"Task plugin.GetPlayerCharacterMaster() out of bound: {playerNum}");
+                return playerCharacterMasters[0];
+            }
             return playerCharacterMasters[playerNum];
         }
 
         public static string GetPlayerName(int playerNum)
         {
+            // for use when all players fail a task
+            if (playerNum < 0)
+                return "FAILURE";
             return GetPlayerCharacterMaster(playerNum).playerCharacterMasterController.GetDisplayName();
         }
 
@@ -1252,7 +1306,8 @@ namespace Tasks
             // do this to not try to give out items for those tasks
             if (!NetworkServer.active)
                 return;
-            GiveReward(taskType, playerNum);
+            if(playerNum >= 0)
+                GiveReward(taskType, playerNum);
 
             // NetworkingAPI version
             // but this sends to all clients, doesn't it?
@@ -1260,7 +1315,8 @@ namespace Tasks
 
             // old miniRPC version
             TaskCompletionInfo info = new TaskCompletionInfo((int)taskType, GetPlayerName(playerNum));
-            taskCompletionClient.Invoke(info, NetworkUser.readOnlyInstancesList[playerNum]);
+            if(playerNum >= 0)
+                taskCompletionClient.Invoke(info, NetworkUser.readOnlyInstancesList[playerNum]);
             taskEndedClient.Invoke(info); 
         }
 

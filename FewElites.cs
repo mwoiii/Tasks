@@ -81,6 +81,14 @@ namespace Tasks
             if (damageReport.victimIsElite)
             {
                 kills[playerNum]++;
+                if(totalNumberPlayers == 1)
+                {
+                    if(kills[playerNum] > maxKills)
+                    {
+                        // -1 is the failure state
+                        CompleteTask(-1);
+                    }
+                }
             }
 
             UpdateProgress();

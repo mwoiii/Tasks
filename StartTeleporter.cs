@@ -96,6 +96,11 @@ namespace Tasks
                 UpdateProgressSolo();
             }
             hasFailed = true;
+            if(!succeeded)
+            {
+                // failure case is -1
+                CompleteTask(-1);
+            }
         }
 
         void Evaluate(int playerNum)
@@ -118,7 +123,8 @@ namespace Tasks
         {
             if (succeeded)
             {
-                progress[0] = 1;
+                // full bar just clutters it up, so just empty it
+                progress[0] = 0;
             }
             else
             {

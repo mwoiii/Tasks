@@ -169,6 +169,11 @@ namespace Tasks
                                 }
                             }
                         }
+                        else
+                        {
+                            // -1 is the failure case
+                            CompleteTask(-1);
+                        }
                     }
                 }
             }

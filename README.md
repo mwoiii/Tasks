@@ -8,15 +8,11 @@ The mod technically works in singleplayer, but most of the tasks are only active
 
 ## Task Examples
 
-AirKills - Jump, then get x kills before you touch the ground.
-
-MostDistance - Travel the farthest. Evaluated when you charge the TP and use it to go to the next stage.
-
-OpenChests - Be the first to open x chests (multishops count too).
-
-Die - It's a race to 0hp.
-
-VeryBest - Be the very best. Like no one ever was. (kill the most unique enemies. Beetle and fire beetle are different.)
+AirKills - Jump, then get x kills before you touch the ground.  
+MostDistance - Travel the farthest. Evaluated when you charge the TP and use it to go to the next stage.  
+OpenChests - Be the first to open x chests (multishops count too).  
+Die - It's a race to 0hp.  
+VeryBest - Be the very best. Like no one ever was. (kill the most unique enemies. Beetle and fire beetle are different.)  
 
 There are 20+ tasks to do. The description mostly tells you what to do. Some of the descriptions are a bit vague so you'll have to figure out what to do.
 
@@ -42,6 +38,12 @@ Command Icon (purple thing by goat hoof) - shows when the reward will be a comma
 
 x5 - that item will be a temp item. So, the armour and syringes here.
 
+## Wiki
+
+Check out the wiki. It explains how the tasks and rewards work in more detail. Click the github link at the top of this page and go to the wiki tab. Or click this link.
+
+(https://github.com/TyLanger/Tasks/wiki)
+
 ## Installation
 
 Requires BepInEx, R2API, HookGenPatcher, and MiniRpcLib
@@ -63,3 +65,5 @@ You can increase how many tasks are active each stage, but I don't really recomm
 1.0.0 - the mod probably works. The UI is bad and there are probably bugs.
 
 1.1.0 - Updated to work with SoTV Update
+
+1.2.0 - Some tasks are more solo friendly. Adds 4 tasks to the solo pool.

@@ -154,10 +154,6 @@ namespace Tasks
                 }
                 else
                 {
-                    // I couldn't get this to run. Maybe this wasn't the issue?
-                    // get null reference exception and this message DOESN'T appear
-                    // so it doesn't stop that from happening
-                    // maybe this message plays in between stages? So it might still be neeeded
                     Debug.Log($"{type:g} was inactive. Don't update progress");
                 }
             }
