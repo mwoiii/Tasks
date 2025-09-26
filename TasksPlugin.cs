@@ -29,7 +29,7 @@ namespace Tasks {
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "1.2.2";
+            VERSION = "1.2.3";
 
         public static TasksPlugin instance;
 
@@ -181,6 +181,8 @@ namespace Tasks {
 
         void GameSetup(Run run) {
             // clients need these
+
+
             totalNumTasks = Enum.GetNames(typeof(TaskType)).Length;
             rewards = new Reward[totalNumTasks];
 
@@ -1294,22 +1296,25 @@ namespace Tasks {
                 // Record what items to remove
                 RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
             } else if (rewards[(int)task].type == RewardType.Command) {
-                // typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
-                RunArtifactManager.instance.SetArtifactEnabled(RoR2Content.Artifacts.commandArtifactDef, true);
-                CommandArtifactManager.OnArtifactEnabled(RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
-                if (CommandArtifactManager.commandCubePrefab is null) {
-                    Debug.LogWarning("CommandCubePefab is null!");
-                    CommandArtifactManager.commandCubePrefab = Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_Base_Command.CommandCube_prefab).WaitForCompletion();
-                    //Chat.AddMessage("commandCubePrefab is null"); // always null??? Is GetField wrong? GetMember GetProperty GetFieldCached???
+
+                // run only if command is not active, so it isn't turned off at the end
+                if (!CommandArtifactManager.IsCommandArtifactEnabled) {
+                    RunArtifactManager.instance.SetArtifactEnabled(RoR2Content.Artifacts.commandArtifactDef, true);
+                    CommandArtifactManager.OnArtifactEnabled(RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                    if (CommandArtifactManager.commandCubePrefab is null) {
+                        Debug.LogWarning("CommandCubePefab is null!");
+                        CommandArtifactManager.commandCubePrefab = Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_Base_Command.CommandCube_prefab).WaitForCompletion();
+                        //Chat.AddMessage("commandCubePrefab is null"); // always null??? Is GetField wrong? GetMember GetProperty GetFieldCached???
+                    }
+
+                    //icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
+                    //typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                    // typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", RoR2.LegacyResourcesAPI.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+
+                    // need to make an item droplet. Specifically have it hit the ground
+                    On.RoR2.PickupDropletController.OnCollisionEnter += TurnOffCommand;
+                    // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
                 }
-
-                //icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
-                //typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
-                // typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", RoR2.LegacyResourcesAPI.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
-
-                // need to make an item droplet. Specifically have it hit the ground
-                On.RoR2.PickupDropletController.OnCollisionEnter += TurnOffCommand;
-                // technically, the next droplet to hit the ground is the command droplet. Whether it was created right here or if it was in the air already when this one was spawned.
 
                 // create a droplet
                 PickupIndex p = rewards[(int)task].item;
