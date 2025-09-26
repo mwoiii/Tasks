@@ -10,6 +10,7 @@ using RoR2;
 using RoR2.Artifacts;
 using RoR2.UI;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.Networking;
 using UnityEngine.UI;
 
@@ -28,7 +29,7 @@ namespace Tasks {
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "1.2.1";
+            VERSION = "1.2.2";
 
         public static TasksPlugin instance;
 
@@ -1255,7 +1256,9 @@ namespace Tasks {
 
                 // updateProgressClient.Invoke(p, NetworkUser.readOnlyInstancesList[i]);
 
-                new SyncUpdateProgress(p.taskIndex, p.GetMyProgress(), p.GetRivalProgress(), NetworkUser.readOnlyInstancesList[i].master.networkIdentity).Send(NetworkDestination.Clients);
+                if (NetworkUser.readOnlyInstancesList[i]?.master?.networkIdentity != null) {
+                    new SyncUpdateProgress(p.taskIndex, p.GetMyProgress(), p.GetRivalProgress(), NetworkUser.readOnlyInstancesList[i].master.networkIdentity).Send(NetworkDestination.Clients);
+                }
 
                 //new UpdateProgressMessage(p, i).Send(NetworkDestination.Clients);
             }
@@ -1291,13 +1294,18 @@ namespace Tasks {
                 // Record what items to remove
                 RecordTempItems(playerNum, rewards[(int)task].item, rewards[(int)task].numItems);
             } else if (rewards[(int)task].type == RewardType.Command) {
-                typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
-                if (typeof(CommandArtifactManager).GetField("commandCubePrefab") is null) {
+                // typeof(CommandArtifactManager).InvokeMethod("OnArtifactEnabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                RunArtifactManager.instance.SetArtifactEnabled(RoR2Content.Artifacts.commandArtifactDef, true);
+                CommandArtifactManager.OnArtifactEnabled(RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+                if (CommandArtifactManager.commandCubePrefab is null) {
+                    Debug.LogWarning("CommandCubePefab is null!");
+                    CommandArtifactManager.commandCubePrefab = Addressables.LoadAssetAsync<GameObject>(RoR2BepInExPack.GameAssetPathsBetter.RoR2_Base_Command.CommandCube_prefab).WaitForCompletion();
                     //Chat.AddMessage("commandCubePrefab is null"); // always null??? Is GetField wrong? GetMember GetProperty GetFieldCached???
                 }
+
                 //icon.image.texture = RoR2.LegacyResourcesAPI.Load<Texture>(path);// Resources.Load<Texture>(path);
                 //typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", Resources.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
-                typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", RoR2.LegacyResourcesAPI.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
+                // typeof(CommandArtifactManager).SetFieldValue<GameObject>("commandCubePrefab", RoR2.LegacyResourcesAPI.Load<GameObject>("Prefabs/NetworkedObjects/CommandCube"));
 
                 // need to make an item droplet. Specifically have it hit the ground
                 On.RoR2.PickupDropletController.OnCollisionEnter += TurnOffCommand;
@@ -1316,9 +1324,11 @@ namespace Tasks {
 
         static void TurnOffCommand(On.RoR2.PickupDropletController.orig_OnCollisionEnter orig, PickupDropletController self, Collision collision) {
             orig(self, collision);
-            if (NetworkServer.active && self.alive) {
-                typeof(CommandArtifactManager).InvokeMethod("OnArtifactDisabled", RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
+            if (NetworkServer.active) {
+                RunArtifactManager.instance.SetArtifactEnabled(RoR2Content.Artifacts.commandArtifactDef, false);
+                CommandArtifactManager.OnArtifactDisabled(RunArtifactManager.instance, RoR2Content.Artifacts.commandArtifactDef);
             }
+            On.RoR2.PickupDropletController.OnCollisionEnter -= TurnOffCommand; // icky
         }
 
         void RecordTempItems(int playerNum, PickupIndex item, int count) {
