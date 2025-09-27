@@ -29,7 +29,7 @@ namespace Tasks {
             MODNAME = "Tasks",
             AUTHOR = "Solrun",
             GUID = "com." + AUTHOR + "." + MODNAME,
-            VERSION = "1.2.3";
+            VERSION = "1.2.4";
 
         public static TasksPlugin instance;
 
@@ -1211,7 +1211,7 @@ namespace Tasks {
             // but this sends to all clients, doesn't it?
             //new TaskCompletionMessage((int)taskType, playerNum).Send(NetworkDestination.Clients);
 
-            new SyncTaskCompletion((int)taskType, GetPlayerName(playerNum), GetPlayerCharacterMaster(playerNum).networkIdentity).Send(NetworkDestination.Clients);
+            new SyncTaskCompletion((int)taskType, GetPlayerName(playerNum)).Send(NetworkDestination.Clients);
 
             /*
             // old miniRPC version
@@ -1245,7 +1245,7 @@ namespace Tasks {
                 float rival = 0;
                 for (int j = 0; j < totalNumPlayers; j++) {
                     if (j == i)
-                        break;
+                        continue; // break;    bruh
                     if (progress[j] > rival) {
                         rival = progress[j];
                     }
@@ -1420,33 +1420,26 @@ namespace Tasks {
 
         public int taskType;
         public string winnerName;
-        NetworkIdentity netIdentity;
 
         public SyncTaskCompletion() {
         }
 
-        public SyncTaskCompletion(int _taskType, string _winnerName, NetworkIdentity _netIdentity) {
+        public SyncTaskCompletion(int _taskType, string _winnerName) {
             taskType = _taskType;
             winnerName = _winnerName;
-            netIdentity = _netIdentity;
         }
 
         public void Serialize(NetworkWriter writer) {
             writer.Write(taskType);
             writer.Write(winnerName);
-            writer.Write(netIdentity);
         }
 
         public void Deserialize(NetworkReader reader) {
             taskType = reader.ReadInt32();
             winnerName = reader.ReadString();
-            netIdentity = reader.ReadNetworkIdentity();
         }
 
         public void OnReceived() {
-            if (!Util.HasEffectiveAuthority(netIdentity)) {
-                return;
-            }
             // code that runs on the client
             // user specifies which user so I don't have to check
             TasksPlugin.instance.CreateNotification(taskType);
@@ -1567,8 +1560,8 @@ namespace Tasks {
     public class SyncUpdateProgress : INetMessage {
 
         public int taskIndex;
-        int myProgress;
-        int rivalProgress;
+        float myProgress;
+        float rivalProgress;
         ProgressInfo progressInfo;
         NetworkIdentity netIdentity;
 
@@ -1577,11 +1570,8 @@ namespace Tasks {
 
         public SyncUpdateProgress(int _taskIndex, float _myProgress, float _rivalProgress, NetworkIdentity _netIdentity) {
             taskIndex = _taskIndex;
-            // can't serialize floats (or I don't know how)
-            // so just convert from 0.0->1.0 to 00 to 10
-            // Lose most decimal places, but didn't need them anyway
-            myProgress = (int)(_myProgress * 10);
-            rivalProgress = (int)(_rivalProgress * 10);
+            myProgress = _myProgress;
+            rivalProgress = _rivalProgress;
             netIdentity = _netIdentity;
 
         }
@@ -1595,8 +1585,8 @@ namespace Tasks {
 
         public void Deserialize(NetworkReader reader) {
             taskIndex = reader.ReadInt32();
-            myProgress = reader.ReadInt32();
-            rivalProgress = reader.ReadInt32();
+            myProgress = reader.ReadSingle();
+            rivalProgress = reader.ReadSingle();
             netIdentity = reader.ReadNetworkIdentity();
         }
 

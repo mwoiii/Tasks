@@ -1,15 +1,9 @@
-﻿using R2API.Networking.Interfaces;
-using RoR2;
-using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using RoR2;
 using UnityEngine.Networking;
 
-namespace Tasks
-{
+namespace Tasks {
 
-    public class TaskInfo : MessageBase
-    {
+    public class TaskInfo : MessageBase {
         public int taskType;
         public string description;
         public bool completed;
@@ -17,8 +11,7 @@ namespace Tasks
         public int total;
         public Reward reward;
 
-        public override void Serialize(NetworkWriter writer)
-        {
+        public override void Serialize(NetworkWriter writer) {
             writer.Write(taskType);
             writer.Write(description);
             writer.Write(completed);
@@ -34,8 +27,7 @@ namespace Tasks
             writer.Write(reward.dronePath);
         }
 
-        public override void Deserialize(NetworkReader reader)
-        {
+        public override void Deserialize(NetworkReader reader) {
             taskType = reader.ReadInt32();
             description = reader.ReadString();
             completed = reader.ReadBoolean();
@@ -53,8 +45,7 @@ namespace Tasks
             PickupIndex p = new PickupIndex(item);
             reward = new Reward((RewardType)type, p, numItems, temp, gold, xp, path);
         }
-        public TaskInfo(int _type, string _description, bool _completed, int _index, int _total, Reward _reward)
-        {
+        public TaskInfo(int _type, string _description, bool _completed, int _index, int _total, Reward _reward) {
             taskType = _type;
             description = _description;
             completed = _completed;
@@ -63,82 +54,69 @@ namespace Tasks
             reward = _reward;
         }
 
-        public TaskInfo(NetworkReader reader)
-        {
+        public TaskInfo(NetworkReader reader) {
             Deserialize(reader);
         }
 
         public override string ToString() => $"TaskInfo: {taskType}, {description}, {completed}, {index}/{total}";
     }
 
-    public class ProgressInfo : MessageBase
-    {
+    public class ProgressInfo : MessageBase {
         public int taskIndex;
-        int myProgress;
-        int rivalProgress;
+        float myProgress;
+        float rivalProgress;
 
-        public ProgressInfo(int _taskIndex, float _myProgress, float _rivalProgress)
-        {
+        public ProgressInfo(int _taskIndex, float _myProgress, float _rivalProgress) {
             taskIndex = _taskIndex;
-            // can't serialize floats (or I don't know how)
+            // can't serialize floats (or I don't know how)      bro
             // so just convert from 0.0->1.0 to 00 to 10
             // Lose most decimal places, but didn't need them anyway
-            myProgress = (int)(_myProgress * 10);
-            rivalProgress = (int)(_rivalProgress * 10);
+            myProgress = _myProgress;
+            rivalProgress = _rivalProgress;
         }
 
-        public ProgressInfo(int _taskIndex, int _myProgress, int _rivalProgress)
-        {
+        public ProgressInfo(int _taskIndex, int _myProgress, int _rivalProgress) {
             taskIndex = _taskIndex;
             myProgress = _myProgress;
             rivalProgress = _rivalProgress;
         }
 
-        public float GetMyProgress()
-        {
-            // convert back to floats
-            return myProgress / 10f;
+        public float GetMyProgress() {
+            return myProgress;
         }
 
-        public float GetRivalProgress()
-        {
-            return rivalProgress / 10f;
+        public float GetRivalProgress() {
+            return rivalProgress;
         }
 
-        public override void Serialize(NetworkWriter writer)
-        {
+        public override void Serialize(NetworkWriter writer) {
             writer.Write(taskIndex);
             writer.Write(myProgress);
             writer.Write(rivalProgress);
         }
 
-        public override void Deserialize(NetworkReader reader)
-        {
+        public override void Deserialize(NetworkReader reader) {
             taskIndex = reader.ReadInt32();
-            myProgress = reader.ReadInt32();
-            rivalProgress = reader.ReadInt32();
+            myProgress = reader.ReadSingle();
+            rivalProgress = reader.ReadSingle();
         }
     }
 
-    public class TaskCompletionInfo : MessageBase
-    {
+    public class TaskCompletionInfo : MessageBase {
         public int taskType;
         public string winnerName;
 
-        public TaskCompletionInfo(int _taskType, string _winnerName)
-        {
+        public TaskCompletionInfo(int _taskType, string _winnerName) {
             taskType = _taskType;
             winnerName = _winnerName;
         }
 
-        public override void Serialize(NetworkWriter writer)
-        {
+        public override void Serialize(NetworkWriter writer) {
             writer.Write(taskType);
             writer.Write(winnerName);
         }
 
-        public override void Deserialize(NetworkReader reader)
-        {
+        public override void Deserialize(NetworkReader reader) {
             taskType = reader.ReadInt32();
             winnerName = reader.ReadString();
         }
